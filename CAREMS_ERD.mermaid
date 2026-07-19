@@ -167,6 +167,21 @@ erDiagram
         string journal_id FK
     }
 
+    TAX_RATE_SETTINGS {
+        string setting_id PK
+        string tax_type
+        decimal rate
+        date effective_from
+    }
+
+    PAYE_TAX_BANDS {
+        string band_id PK
+        decimal lower_bound
+        decimal upper_bound
+        decimal rate
+        date effective_from
+    }
+
     AUDIT_LOG {
         string log_id PK
         string user_id FK
