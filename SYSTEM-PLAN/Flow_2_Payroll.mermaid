@@ -1,0 +1,22 @@
+flowchart TD
+    A[HR: Maintain Employee Register] --> B[Accountant initiates Payroll Run for period]
+    B --> C[System calculates Gross Salary per employee]
+    C --> D[System calculates PAYE<br/>using configurable tax settings]
+    C --> E[System calculates SSNIT<br/>Employee percent and Employer percent<br/>from configurable tax settings]
+    C --> F[System calculates Other Deductions]
+    D --> G[Generate Payslips]
+    E --> G
+    F --> G
+
+    G --> H[Accountant reviews Payroll Run]
+    H --> I{Approved?}
+    I -- No, corrections needed --> B
+    I -- Yes --> J[Post Payroll Journal<br/>Dr Salary Expense<br/>Dr Employer SSNIT Expense<br/>Cr Staff Salaries Payable<br/>Cr PAYE Payable<br/>Cr SSNIT Payable<br/>Cr Other Payroll Deductions Payable]
+
+    J --> K[Employee Self-Service Portal:<br/>Payslip becomes available]
+    J --> L[Accountant initiates Salary Payment Run]
+    L --> M[Post Payment Journal<br/>Dr Staff Salaries Payable / Cr Bank]
+    M --> P[Bank Reconciliation]
+
+    J --> Q[PAYE Payable and SSNIT Payable<br/>feed Tax Reports and Filing Schedules]
+    Q --> R[Accountant Task Centre:<br/>Upcoming tax deadlines, Payroll due dates]

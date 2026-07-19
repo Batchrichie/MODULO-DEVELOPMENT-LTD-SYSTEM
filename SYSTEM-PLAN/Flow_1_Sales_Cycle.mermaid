@@ -1,0 +1,24 @@
+flowchart TD
+    A[CRM: Create Lead] --> B[Prepare Quotation]
+    B --> C{Client Accepts?}
+    C -- No --> Z[Close as Lost]
+    C -- Yes --> D[Create Project Record<br/>Contract Value, Budget, Project Manager assigned]
+
+    D --> E[Client pays Mobilization Advance]
+    E --> F[Journal: Dr Bank / Cr Client Advances<br/>No revenue recognized yet]
+
+    D --> G[Project Manager submits<br/>Periodic Completion Assessment]
+    G --> H[Accountant reviews and approves assessment]
+    H --> I[System posts Revenue Recognition Journal<br/>Dr Contract Assets-WIP / Cr Revenue<br/>amount = Contract Value x percent complete, less revenue already recognized]
+
+    I --> J[Accountant raises Milestone Invoice]
+    J --> K[System posts Invoice Journal<br/>Dr Accounts Receivable<br/>Cr Contract Assets-WIP up to recognized revenue<br/>Cr Client Advances for any excess billed<br/>Cr VAT / NHIL / GETFund Output]
+
+    K --> L[Client makes Payment against Invoice]
+    L --> M[Journal: Dr Bank / Cr Accounts Receivable]
+
+    F --> N[Financial Reports auto-update:<br/>Trial Balance, Income Statement, Statement of Financial Position]
+    I --> N
+    M --> N
+
+    N --> O[Executive Dashboard reflects<br/>Cash Position, Revenue, Project Profitability]

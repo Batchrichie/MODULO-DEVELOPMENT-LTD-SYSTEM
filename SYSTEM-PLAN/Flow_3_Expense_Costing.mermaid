@@ -1,0 +1,19 @@
+flowchart TD
+    A[Supplier Invoice Received] --> B[Accountant or Project Manager records Expense<br/>tagged to Project and GL Account]
+    B --> C{Exceeds Project Budget?}
+    C -- Yes --> D[System raises INSUFFICIENT_BUDGET warning<br/>transaction still proceeds]
+    D --> E[Flag surfaces on Accountant Task Centre:<br/>Projects exceeding budget]
+    C -- No --> F[Proceed]
+    D --> F
+
+    F --> G[Post Expense Journal<br/>Dr Expense or Fixed Asset<br/>Dr VAT Input<br/>Cr Accounts Payable]
+
+    G --> H[Project Budget vs Actual updates in real time]
+    G --> I[Supplier Payment falls due]
+    I --> J[Accountant processes Supplier Payment]
+    J --> K[Post Payment Journal<br/>Dr Accounts Payable / Cr Bank]
+    K --> L[Bank Reconciliation]
+
+    G --> M[Financial Reports auto-update:<br/>Trial Balance, Income Statement, Project Profitability]
+    H --> N[Executive Dashboard:<br/>Project Profitability, Cash Position]
+    M --> N
