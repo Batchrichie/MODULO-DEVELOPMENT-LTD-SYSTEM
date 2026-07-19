@@ -71,7 +71,7 @@ POST /projects
 | Customer Payment (advance, no invoice) | `POST /payments/received` (omit `invoice_id`) | Bank, Client Advances/Unearned Revenue |
 | Supplier Invoice | `POST /expenses` | Expense/Asset, VAT Input, AP |
 | Supplier Payment | `POST /payments/made` | AP, Bank |
-| Rental Invoice | `POST /rentals/:id/invoice` | AR, Rental Revenue, Tax Output |
+| Rental Invoice | `POST /rentals/:id/invoice` | AR, Rental Revenue, Tax Output — sets `rental_contract_id` on the created invoice so it's traceable back to the contract, distinct from project milestone invoices |
 | Payroll Run | `POST /payroll/run` | Salary Expense, Employer SSNIT Expense, Payables (Salaries/PAYE/SSNIT/Deductions) |
 | Salary Payment | `POST /payroll/:run_id/pay` | Salaries Payable, Bank |
 | Asset Purchase | `POST /assets` (with `cost` field) | Fixed Asset, AP/Bank |

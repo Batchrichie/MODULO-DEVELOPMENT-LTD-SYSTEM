@@ -65,6 +65,7 @@ erDiagram
         string invoice_id PK
         string customer_id FK
         string project_id FK
+        string rental_contract_id "FK, nullable - set only for rental-generated invoices"
         decimal amount
         decimal vat
         decimal nhil
