@@ -45,3 +45,16 @@
 .skeleton { border-radius: var(--radius-sm); background: linear-gradient(90deg, var(--color-border) 25%, var(--color-bg-muted) 50%, var(--color-border) 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; color: transparent; }
 @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 @media (max-width:768px) { .stat-card { min-height: 118px; padding: 13px; }.stat-card__icon { top: 12px; right: 12px; }.stat-card__content strong { margin-top: 11px; font-size: 22px; }.stat-card__content span { font-size: 10px; }.stat-card__content small { font-size: 11px; } }
+
+/* Fluid layout overrides for every portal */
+.portal-shell__main { padding-inline: clamp(16px, 4vw, 56px); }
+.admin-dashboard__stats { grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: clamp(12px, 1.5vw, 16px); }
+.users-card__header { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-start; }
+.users-card__header > div:first-child { min-width: min(100%, 240px); flex: 1 1 280px; }
+.users-card__actions { flex: 0 1 auto; }
+.admin-dashboard__header h1 { font-size: clamp(22px, 3vw, 28px); }
+.portal-shell__main > * { animation: fadeUp .4s ease both; }
+@media (max-width: 480px) {
+	.users-card__actions { width: 100%; flex-direction: column; }
+	.users-card__actions .button { width: 100%; }
+}
