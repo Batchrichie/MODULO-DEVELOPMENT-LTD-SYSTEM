@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>CAREMS Wireframes</title>
+<style>
+  :root{--line:#94a3b8;--bg:#f8fafc;--box:#ffffff;--text:#334155;--muted:#94a3b8;--accent:#475569;}
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:'Courier New',monospace;background:var(--bg);color:var(--text);}
+  .tabs{display:flex;gap:0;border-bottom:2px solid var(--accent);background:#e2e8f0;overflow-x:auto;}
+  .tab{padding:14px 20px;cursor:pointer;font-size:13px;font-weight:bold;letter-spacing:.5px;border-right:1px solid var(--line);white-space:nowrap;}
+  .tab.active{background:var(--bg);border-bottom:3px solid var(--accent);}
+  .screen{display:none;padding:24px;max-width:1100px;margin:0 auto;}
+  .screen.active{display:block;}
+  .title{font-size:12px;color:var(--muted);margin-bottom:16px;text-transform:uppercase;letter-spacing:1px;}
+  .box{border:2px dashed var(--line);background:var(--box);border-radius:2px;padding:12px;}
+  .label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;}
+  .grid{display:grid;gap:14px;}
+  .g4{grid-template-columns:repeat(4,1fr);}
+  .g3{grid-template-columns:repeat(3,1fr);}
+  .g2{grid-template-columns:repeat(2,1fr);}
+  .kpi{height:70px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:bold;}
+  .row{display:flex;gap:14px;margin-bottom:14px;}
+  .col{flex:1;}
+  .btn{display:inline-block;border:2px solid var(--accent);padding:6px 14px;font-size:11px;margin:4px 6px 0 0;background:#fff;}
+  .table-mock td, .table-mock th{border:1px solid var(--line);padding:6px 8px;font-size:11px;text-align:left;}
+  .table-mock{width:100%;border-collapse:collapse;}
+  .nav{background:var(--accent);color:#fff;padding:10px 16px;font-size:12px;letter-spacing:1px;margin-bottom:16px;}
+  .side{width:140px;}
+  .placeholder-text{color:var(--muted);font-size:11px;}
+  .alert-box{border:2px dashed #b45309;background:#fffbeb;padding:8px;font-size:11px;margin-bottom:8px;}
+  .acc-layout{display:flex;gap:0;align-items:flex-start;}
+  .acc-side{width:220px;flex-shrink:0;background:#fff;border:2px dashed var(--line);border-right:none;padding:0;}
+  .acc-main{flex:1;min-width:0;border:2px dashed var(--line);border-left:none;padding:20px;}
+  .acc-nav-item{padding:10px 16px;font-size:12px;font-weight:bold;letter-spacing:.3px;cursor:default;border-bottom:1px solid #e2e8f0;}
+  .acc-nav-item.selected{background:var(--accent);color:#fff;position:relative;}
+  .acc-nav-item.selected::before{content:'▸';position:absolute;left:4px;}
+  .acc-nav-section{padding:10px 16px 4px;font-size:10px;font-weight:bold;letter-spacing:.8px;text-transform:uppercase;color:var(--muted);border-bottom:1px solid #e2e8f0;background:#f1f5f9;}
+  .acc-nav-child{padding:9px 16px 9px 30px;font-size:11.5px;border-bottom:1px solid #e2e8f0;}
+  .acc-nav-child.selected{background:var(--accent);color:#fff;font-weight:bold;position:relative;}
+  .acc-nav-child.selected::before{content:'▸';position:absolute;left:14px;}
+  .breadcrumb{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:14px;}
+</style>
+</head>
+<body>
+
+<div class="tabs" id="tabs"></div>
+<div id="screens"></div>
+
+<script>
+const roles = [
+  {
+    id: "ceo", name: "CEO / MD — Executive Dashboard",
+    build: () => `
+      <div class="nav">CAREMS &nbsp;|&nbsp; Executive Dashboard &nbsp;|&nbsp; View-only</div>
+      <div class="acc-layout">
+        <div class="acc-side">
+          <div class="acc-nav-item selected">Executive Dashboard</div>
+          <div class="acc-nav-item">Financial Overview</div>
+          <div class="acc-nav-item">Project Portfolio</div>
+          <div class="acc-nav-item">Equipment Rentals</div>
+          <div class="acc-nav-item">Tax &amp; Compliance</div>
+          <div class="acc-nav-item">Reports</div>
+          <div class="acc-nav-item">Alerts &amp; Notifications</div>
+        </div>
+        <div class="acc-main">
+          <div class="breadcrumb">Section 4.1 — Executive Dashboard (view-only)</div>
+          <div class="grid g4">
+            <div class="box kpi">Cash Position</div>
+            <div class="box kpi">Revenue (period)</div>
+            <div class="box kpi">Net Profit</div>
+            <div class="box kpi">Active Projects</div>
+          </div>
+          <div class="row" style="margin-top:14px;">
+            <div class="col box"><div class="label">Project Profitability</div><div class="placeholder-text">[ bar chart: revenue vs cost per project ]</div></div>
+            <div class="col box"><div class="label">Equipment Rental Revenue</div><div class="placeholder-text">[ line chart: monthly trend ]</div></div>
+          </div>
+          <div class="row">
+            <div class="col box"><div class="label">Tax Status</div>VAT · NHIL · GETFund · PAYE · SSNIT <span class="placeholder-text">(compliant / due indicators)</span></div>
+            <div class="col box"><div class="label">Alerts & Notifications</div><div class="alert-box">3 projects exceeding budget</div><div class="alert-box">VAT filing due in 5 days</div></div>
+          </div>
+        </div>
+      </div>`
+  },
+  {
+    id: "accountant", name: "Accountant Workspace",
+    build: () => `
+      <div class="nav">CAREMS &nbsp;|&nbsp; Accounting Workspace</div>
+      <div class="acc-layout">
+        <div class="acc-side">
+          <div class="acc-nav-item">Dashboard</div>
+          <div class="acc-nav-item">Chart of Accounts</div>
+          <div class="acc-nav-item">Journal Entries</div>
+          <div class="acc-nav-item">General Ledger</div>
+          <div class="acc-nav-item">Trial Balance</div>
+
+          <div class="acc-nav-section">Payroll &amp; HR</div>
+          <div class="acc-nav-child">Employee Records</div>
+          <div class="acc-nav-child">Payroll</div>
+          <div class="acc-nav-child">Loan Management</div>
+
+          <div class="acc-nav-section">Banking &amp; Cash</div>
+          <div class="acc-nav-child">Bank Accounts</div>
+          <div class="acc-nav-child">Petty Cash</div>
+          <div class="acc-nav-child">Third Party Accounts</div>
+
+          <div class="acc-nav-section">Asset Management</div>
+          <div class="acc-nav-child selected">Asset Register</div>
+          <div class="acc-nav-child">PPE Schedule</div>
+          <div class="acc-nav-child">Depreciation Journal</div>
+
+          <div class="acc-nav-section">Budgeting</div>
+          <div class="acc-nav-child">Budgets</div>
+          <div class="acc-nav-child">Budget vs Actual</div>
+
+          <div class="acc-nav-section">Reports</div>
+          <div class="acc-nav-child">Financial Reports</div>
+
+          <div class="acc-nav-section">User Account</div>
+          <div class="acc-nav-child">My Profile</div>
+          <div class="acc-nav-child">Settings</div>
+          <div class="acc-nav-child">Policy Settings</div>
+          <div class="acc-nav-child">Audit Trail</div>
+        </div>
+        <div class="acc-main">
+          <div class="breadcrumb">Asset Management &gt; Asset Register</div>
+          <div class="row">
+            <span class="btn">+ Add Asset</span><span class="btn">Import Assets</span><span class="btn">Export</span>
+          </div>
+          <div class="box" style="margin-top:14px;">
+            <div class="label">Asset Register</div>
+            <table class="table-mock">
+              <tr><th>Asset ID</th><th>Description</th><th>Category</th><th>Location</th><th>Acquisition Date</th><th>Cost (GHS)</th><th>NBV (GHS)</th><th>Status</th></tr>
+              <tr><td>FA-0021</td><td>Excavator CAT 320</td><td>Heavy Equipment</td><td>Tse Addo Site</td><td>2023-03-14</td><td>450,000</td><td>337,500</td><td>Active</td></tr>
+              <tr><td>FA-0022</td><td>Toyota Hilux Pickup</td><td>Vehicles</td><td>Head Office</td><td>2022-08-01</td><td>210,000</td><td>126,000</td><td>Active</td></tr>
+              <tr><td>FA-0023</td><td>Office Building — Accra</td><td>PPE — Buildings</td><td>Head Office</td><td>2018-01-10</td><td>2,500,000</td><td>1,875,000</td><td>Active</td></tr>
+              <tr><td>FA-0024</td><td>Site Generator 60kVA</td><td>Equipment</td><td>Tamale Complex</td><td>2021-11-22</td><td>85,000</td><td>42,500</td><td>Under Repair</td></tr>
+              <tr><td>FA-0025</td><td>Concrete Mixer</td><td>Equipment</td><td>Tse Addo Site</td><td>2020-05-06</td><td>32,000</td><td>6,400</td><td>Disposed</td></tr>
+            </table>
+          </div>
+          <div class="row" style="margin-top:14px;">
+            <div class="col box"><div class="label">Register Summary</div><span class="placeholder-text">Total assets: 87 &nbsp;·&nbsp; Total cost: GHS 8.4M &nbsp;·&nbsp; Total NBV: GHS 5.1M</span></div>
+            <div class="col box"><div class="label">Filters</div><span class="placeholder-text">Category · Location · Status · Acquisition date range</span></div>
+          </div>
+        </div>
+      </div>`
+  },
+  {
+    id: "pm", name: "Project Manager Workspace",
+    build: () => `
+      <div class="nav">CAREMS &nbsp;|&nbsp; Project Manager Workspace</div>
+      <div class="acc-layout">
+        <div class="acc-side">
+          <div class="acc-nav-item selected">My Projects</div>
+          <div class="acc-nav-item">Project Costing</div>
+          <div class="acc-nav-item">Completion Assessments</div>
+          <div class="acc-nav-item">Site Reports</div>
+          <div class="acc-nav-item">Budget Tracking</div>
+          <div class="acc-nav-item">Documents</div>
+        </div>
+        <div class="acc-main">
+          <div class="breadcrumb">Section 4.3 — Project Management &amp; Costing</div>
+          <div class="box" style="margin-bottom:14px;">
+            <div class="label">My Projects</div>
+            <table class="table-mock">
+              <tr><th>Project</th><th>% Complete</th><th>Budget vs Actual</th><th>Status</th></tr>
+              <tr><td>Tse Addo Site</td><td>45%</td><td>GHS 210,000 / 250,000</td><td>On track</td></tr>
+              <tr><td>Tamale Complex</td><td>15%</td><td>GHS 90,000 / 80,000</td><td>Over budget</td></tr>
+            </table>
+          </div>
+          <div class="row">
+            <div class="col box"><div class="label">Submit Completion Assessment</div><span class="placeholder-text">% complete input + notes</span><br><span class="btn">Submit for Accountant Approval</span></div>
+            <div class="col box"><div class="label">Site Reports</div><span class="placeholder-text">[ upload photo / notes / date ]</span></div>
+          </div>
+        </div>
+      </div>`
+  },
+  {
+    id: "employee", name: "Employee Self-Service",
+    build: () => `
+      <div class="nav">CAREMS &nbsp;|&nbsp; Employee Self-Service</div>
+      <div class="acc-layout">
+        <div class="acc-side">
+          <div class="acc-nav-item selected">My Profile</div>
+          <div class="acc-nav-item">Payslips</div>
+          <div class="acc-nav-item">Leave</div>
+          <div class="acc-nav-item">Assigned Projects</div>
+          <div class="acc-nav-item">Announcements</div>
+        </div>
+        <div class="acc-main">
+          <div class="breadcrumb">Employee Self-Service &gt; My Profile</div>
+          <div class="grid g3">
+            <div class="box"><div class="label">My Profile</div><span class="placeholder-text">Name, role, department</span></div>
+            <div class="box"><div class="label">Payslips</div><span class="placeholder-text">List by month, download PDF</span></div>
+            <div class="box"><div class="label">Leave</div><span class="btn">Apply for Leave</span><br><span class="placeholder-text">Balance: 12 days</span></div>
+          </div>
+          <div class="row" style="margin-top:14px;">
+            <div class="col box"><div class="label">Assigned Projects</div><span class="placeholder-text">Tse Addo Site — Site Engineer</span></div>
+            <div class="col box"><div class="label">Announcements</div><span class="placeholder-text">Company notices feed</span></div>
+          </div>
+        </div>
+      </div>`
+  },
+  {
+    id: "admin", name: "System Administrator",
+    build: () => `
+      <div class="nav">CAREMS &nbsp;|&nbsp; Admin Panel</div>
+      <div class="acc-layout">
+        <div class="acc-side">
+          <div class="acc-nav-item selected">User Management</div>
+          <div class="acc-nav-item">Roles &amp; Permissions</div>
+          <div class="acc-nav-item">Audit Log</div>
+          <div class="acc-nav-item">Security Monitoring</div>
+          <div class="acc-nav-item">System Settings</div>
+        </div>
+        <div class="acc-main">
+          <div class="breadcrumb">Admin Panel &gt; User Management</div>
+          <div class="grid g2">
+            <div class="box"><div class="label">User Management</div><table class="table-mock"><tr><th>User</th><th>Role</th></tr><tr><td>A. Mensah</td><td>Accountant</td></tr><tr><td>K. Owusu</td><td>Project Manager</td></tr></table></div>
+            <div class="box"><div class="label">Roles & Permissions</div><span class="placeholder-text">Role → endpoint access matrix (API Contract Sec. 4)</span></div>
+          </div>
+          <div class="row" style="margin-top:14px;">
+            <div class="col box"><div class="label">Audit Log</div><span class="placeholder-text">User, timestamp, action, before/after values</span></div>
+            <div class="col box"><div class="label">Security Monitoring</div><span class="placeholder-text">Login attempts, session activity</span></div>
+          </div>
+        </div>
+      </div>`
+  }
+];
+
+const tabsEl = document.getElementById('tabs');
+const screensEl = document.getElementById('screens');
+roles.forEach((r, i) => {
+  const tab = document.createElement('div');
+  tab.className = 'tab' + (i===0?' active':'');
+  tab.textContent = r.name;
+  tab.onclick = () => {
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('screen-'+r.id).classList.add('active');
+  };
+  tabsEl.appendChild(tab);
+
+  const screen = document.createElement('div');
+  screen.className = 'screen' + (i===0?' active':'');
+  screen.id = 'screen-'+r.id;
+  screen.innerHTML = r.build();
+  screensEl.appendChild(screen);
+});
+</script>
+</body>
+</html>

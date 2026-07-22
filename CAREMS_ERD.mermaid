@@ -1,0 +1,236 @@
+erDiagram
+    CUSTOMER {
+        string customer_id PK
+        string name
+        string contact_info
+    }
+
+    SUPPLIER {
+        string supplier_id PK
+        string name
+        string contact_info
+    }
+
+    EMPLOYEE {
+        string employee_id PK
+        string name
+        string role
+        decimal basic_salary
+    }
+
+    PROJECT {
+        string project_id PK
+        string name
+        string customer_id FK
+        decimal contract_value
+        string project_manager_id FK
+        date expected_completion
+        string status
+    }
+
+    EQUIPMENT {
+        string equipment_id PK
+        string name
+        string category
+        string status
+    }
+
+    FIXED_ASSET {
+        string asset_id PK
+        string name
+        string category
+        decimal cost
+        int useful_life_years
+        string depreciation_method
+        string coa_asset_account FK
+        string coa_accum_dep_account FK
+    }
+
+    BANK_ACCOUNT {
+        string account_id PK
+        string bank_name
+        string account_number
+        string coa_account FK
+    }
+
+    CHART_OF_ACCOUNTS {
+        string account_id PK
+        string code
+        string name
+        string type
+        string reporting_group
+    }
+
+    INVOICE {
+        string invoice_id PK
+        string customer_id FK
+        string project_id FK
+        string rental_contract_id "FK, nullable - set only for rental-generated invoices"
+        decimal amount
+        decimal vat
+        decimal nhil
+        decimal getfund
+        string journal_id FK
+        string status
+    }
+
+    INVOICE_LINE {
+        string line_id PK
+        string invoice_id FK
+        string description
+        decimal amount
+    }
+
+    CUSTOMER_PAYMENT {
+        string payment_id PK
+        string customer_id FK
+        string invoice_id "FK, nullable - null means advance payment"
+        string bank_account_id FK
+        decimal amount
+        string journal_id FK
+    }
+
+    EXPENSE {
+        string expense_id PK
+        string supplier_id FK
+        string project_id FK
+        string coa_account FK
+        decimal amount
+        decimal vat_input
+        string journal_id FK
+        string status
+    }
+
+    SUPPLIER_PAYMENT {
+        string payment_id PK
+        string supplier_id FK
+        string expense_id FK
+        string bank_account_id FK
+        decimal amount
+        string journal_id FK
+    }
+
+    RENTAL_CONTRACT {
+        string contract_id PK
+        string equipment_id FK
+        string customer_id FK
+        string project_id FK
+        date start_date
+        date end_date
+        decimal rate
+    }
+
+    PAYROLL_RUN {
+        string run_id PK
+        string period
+        string status
+        string journal_id FK
+    }
+
+    PAYSLIP {
+        string payslip_id PK
+        string run_id FK
+        string employee_id FK
+        decimal gross_salary
+        decimal paye
+        decimal ssnit_employee
+        decimal ssnit_employer
+        decimal other_deductions
+        decimal net_salary
+    }
+
+    JOURNAL {
+        string journal_id PK
+        date txn_date
+        string source_type
+        string source_id
+        string accounting_period
+        string status
+    }
+
+    JOURNAL_LINE {
+        string line_id PK
+        string journal_id FK
+        string account_id FK
+        string project_id FK
+        decimal debit
+        decimal credit
+    }
+
+    PROJECT_COMPLETION_ASSESSMENT {
+        string assessment_id PK
+        string project_id FK
+        string period
+        decimal percent_complete
+        string assessed_by FK
+        string approved_by FK
+        string status
+        string journal_id FK
+    }
+
+    TAX_RATE_SETTINGS {
+        string setting_id PK
+        string tax_type
+        decimal rate
+        date effective_from
+    }
+
+    PAYE_TAX_BANDS {
+        string band_id PK
+        decimal lower_bound
+        decimal upper_bound
+        decimal rate
+        date effective_from
+    }
+
+    AUDIT_LOG {
+        string log_id PK
+        string user_id FK
+        string table_name
+        string record_id
+        string action
+        string old_value
+        string new_value
+        datetime timestamp
+    }
+
+    CUSTOMER ||--o{ PROJECT : commissions
+    EMPLOYEE ||--o{ PROJECT : manages
+    CUSTOMER ||--o{ INVOICE : billed
+    PROJECT ||--o{ INVOICE : "billed under"
+    INVOICE ||--o{ INVOICE_LINE : contains
+    INVOICE |o--o{ CUSTOMER_PAYMENT : "settled by (optional - advances have no invoice yet)"
+    CUSTOMER ||--o{ CUSTOMER_PAYMENT : pays
+    BANK_ACCOUNT ||--o{ CUSTOMER_PAYMENT : "deposited to"
+
+    SUPPLIER ||--o{ EXPENSE : bills
+    PROJECT ||--o{ EXPENSE : incurs
+    EXPENSE ||--o{ SUPPLIER_PAYMENT : "settled by"
+    SUPPLIER ||--o{ SUPPLIER_PAYMENT : receives
+    BANK_ACCOUNT ||--o{ SUPPLIER_PAYMENT : "paid from"
+
+    EQUIPMENT ||--o{ RENTAL_CONTRACT : "rented via"
+    CUSTOMER ||--o{ RENTAL_CONTRACT : rents
+    PROJECT ||--o{ RENTAL_CONTRACT : "used on"
+    RENTAL_CONTRACT ||--o{ INVOICE : generates
+
+    PAYROLL_RUN ||--o{ PAYSLIP : contains
+    EMPLOYEE ||--o{ PAYSLIP : receives
+
+    PROJECT ||--o{ PROJECT_COMPLETION_ASSESSMENT : "assessed periodically"
+    EMPLOYEE ||--o{ PROJECT_COMPLETION_ASSESSMENT : "assesses / approves"
+    PROJECT_COMPLETION_ASSESSMENT ||--|| JOURNAL : "posts revenue recognized"
+
+    FIXED_ASSET }o--|| CHART_OF_ACCOUNTS : "linked to"
+    BANK_ACCOUNT }o--|| CHART_OF_ACCOUNTS : "linked to"
+    EXPENSE }o--|| CHART_OF_ACCOUNTS : "coded to"
+
+    INVOICE ||--|| JOURNAL : posts
+    EXPENSE ||--|| JOURNAL : posts
+    CUSTOMER_PAYMENT ||--|| JOURNAL : posts
+    SUPPLIER_PAYMENT ||--|| JOURNAL : posts
+    PAYROLL_RUN ||--|| JOURNAL : posts
+
+    JOURNAL ||--o{ JOURNAL_LINE : contains
+    JOURNAL_LINE }o--|| CHART_OF_ACCOUNTS : "debits/credits"
+    JOURNAL_LINE }o--o| PROJECT : "tagged to (cost centre)"
