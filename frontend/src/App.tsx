@@ -6,6 +6,7 @@ import { getPortalPathForRole } from './config/roles'
 import { PortalLayout } from './layouts/PortalLayout'
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage'
 import { LoginPage } from './pages/LoginPage'
+import { ExecutiveDashboardPage } from './pages/executive/ExecutiveDashboardPage'
 import { createPortalChildRoutes } from './routes/portalRoutes'
 
 function RootRedirect() {
@@ -41,7 +42,9 @@ function App() {
           </RouteGuard>
         }
       >
-        {createPortalChildRoutes(PORTAL_NAV.CEO)}
+        {createPortalChildRoutes(PORTAL_NAV.CEO, {
+          '/executive/dashboard': <ExecutiveDashboardPage />,
+        })}
       </Route>
 
       <Route

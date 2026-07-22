@@ -1,0 +1,213 @@
+import { useEffect, useState } from 'react'
+import { fetchDashboardExecutive } from '../../lib/rpc/dashboardExecutive'
+import { formatCount, formatMoneyGhs } from '../../lib/formatMoney'
+import {
+  isExecutiveDashboardEmpty,
+  type ExecutiveDashboardData,
+  type ExecutiveAlert,
+  type ExecutiveTaxStatusItem,
+} from '../../types/dashboardExecutive'
+import '../../styles/executive-dashboard.css'
+
+type LoadState =
+  | { status: 'loading' }
+  | { status: 'error'; message: string; code?: string }
+  | { status: 'empty'; data: ExecutiveDashboardData }
+  | { status: 'success'; data: ExecutiveDashboardData }
+
+const TAX_TYPES = ['VAT', 'NHIL', 'GETFund', 'PAYE', 'SSNIT'] as const
+
+function KpiTile({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="exec-dash__kpi">
+      <span className="exec-dash__kpi-label">{label}</span>
+      <span className="exec-dash__kpi-value">{value}</span>
+    </div>
+  )
+}
+
+function MockChartPanel({ title }: { title: string }) {
+  return (
+    <section className="exec-dash__panel exec-dash__panel--mock" aria-labelledby={`mock-${title}`}>
+      <h3 className="exec-dash__panel-title" id={`mock-${title}`}>
+        {title}
+      </h3>
+      <div className="exec-dash__mock-body">
+        <span className="exec-dash__mock-badge">Mock data — pending backend</span>
+        <p className="exec-dash__mock-note">
+          No aggregate endpoint exists for this chart yet (per Frontend Engineering Standard known
+          gaps). This panel is intentionally not wired to live data.
+        </p>
+      </div>
+    </section>
+  )
+}
+
+function TaxStatusPanel({
+  items,
+  taxDataMissing,
+}: {
+  items: ExecutiveTaxStatusItem[] | null
+  taxDataMissing: boolean
+}) {
+  return (
+    <section className="exec-dash__panel" aria-labelledby="tax-status-title">
+      <h3 className="exec-dash__panel-title" id="tax-status-title">
+        Tax Status
+      </h3>
+      {taxDataMissing ? (
+        <p className="exec-dash__gap-note">
+          Tax status data was not returned by <code>dashboard_executive()</code>. A separate
+          endpoint was not called — flagging as a backend response-shape gap.
+        </p>
+      ) : items && items.length > 0 ? (
+        <ul className="exec-dash__tax-list">
+          {items.map((item) => (
+            <li key={item.type} className="exec-dash__tax-item">
+              <span className="exec-dash__tax-type">{item.type}</span>
+              <span className={`exec-dash__tax-status exec-dash__tax-status--${item.status.toLowerCase()}`}>
+                {item.status}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <ul className="exec-dash__tax-list exec-dash__tax-list--placeholder">
+          {TAX_TYPES.map((type) => (
+            <li key={type} className="exec-dash__tax-item">
+              <span className="exec-dash__tax-type">{type}</span>
+              <span className="exec-dash__tax-status exec-dash__tax-status--unknown">No data</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  )
+}
+
+function AlertsPanel({ alerts }: { alerts: ExecutiveAlert[] }) {
+  return (
+    <section className="exec-dash__panel" aria-labelledby="alerts-title">
+      <h3 className="exec-dash__panel-title" id="alerts-title">
+        Alerts &amp; Notifications
+      </h3>
+      {alerts.length === 0 ? (
+        <p className="exec-dash__empty-inline">No alerts at this time.</p>
+      ) : (
+        <ul className="exec-dash__alerts">
+          {alerts.map((alert, index) => (
+            <li key={`${alert.message}-${index}`} className="exec-dash__alert">
+              {alert.message}
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  )
+}
+
+export function ExecutiveDashboardPage() {
+  const [state, setState] = useState<LoadState>({ status: 'loading' })
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function load() {
+      const result = await fetchDashboardExecutive()
+      if (cancelled) return
+
+      if (!result.ok) {
+        setState({
+          status: 'error',
+          message: result.error,
+          code: result.code,
+        })
+        return
+      }
+
+      if (isExecutiveDashboardEmpty(result.data)) {
+        setState({ status: 'empty', data: result.data })
+        return
+      }
+
+      setState({ status: 'success', data: result.data })
+    }
+
+    void load()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  if (state.status === 'loading') {
+    return (
+      <div className="exec-dash" role="status" aria-live="polite">
+        <p className="exec-dash__breadcrumb">Section 4.1 — Executive Dashboard (view-only)</p>
+        <p className="exec-dash__state-message">Loading executive dashboard…</p>
+        <div className="exec-dash__kpi-grid exec-dash__kpi-grid--loading">
+          {['Cash Position', 'Revenue (period)', 'Net Profit', 'Active Projects'].map((label) => (
+            <div key={label} className="exec-dash__kpi exec-dash__kpi--skeleton">
+              <span className="exec-dash__kpi-label">{label}</span>
+              <span className="exec-dash__skeleton-bar" />
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  if (state.status === 'error') {
+    return (
+      <div className="exec-dash" role="alert">
+        <p className="exec-dash__breadcrumb">Section 4.1 — Executive Dashboard (view-only)</p>
+        <div className="exec-dash__state-card exec-dash__state-card--error">
+          <h2 className="exec-dash__state-title">Unable to load dashboard</h2>
+          <p className="exec-dash__state-message">{state.message}</p>
+          {state.code && (
+            <p className="exec-dash__state-code">
+              Error code: <code>{state.code}</code>
+            </p>
+          )}
+          <p className="exec-dash__state-hint">
+            This screen calls <code>dashboard_executive()</code> only. If the function is missing
+            or your role is unauthorized, contact an administrator.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  const data = state.data
+  const taxDataMissing = data.taxStatus === null
+
+  return (
+    <div className="exec-dash">
+      <p className="exec-dash__breadcrumb">Section 4.1 — Executive Dashboard (view-only)</p>
+
+      {state.status === 'empty' && (
+        <div className="exec-dash__state-card exec-dash__state-card--empty" role="status">
+          <p className="exec-dash__state-message">
+            Dashboard loaded but contains no project or financial activity yet.
+          </p>
+        </div>
+      )}
+
+      <div className="exec-dash__kpi-grid">
+        <KpiTile label="Cash Position" value={formatMoneyGhs(data.cashPosition)} />
+        <KpiTile label="Revenue (period)" value={formatMoneyGhs(data.revenue)} />
+        <KpiTile label="Net Profit" value={formatMoneyGhs(data.netProfit)} />
+        <KpiTile label="Active Projects" value={formatCount(data.activeProjects)} />
+      </div>
+
+      <div className="exec-dash__row">
+        <MockChartPanel title="Project Profitability" />
+        <MockChartPanel title="Equipment Rental Revenue" />
+      </div>
+
+      <div className="exec-dash__row">
+        <TaxStatusPanel items={data.taxStatus} taxDataMissing={taxDataMissing} />
+        <AlertsPanel alerts={data.alerts} />
+      </div>
+    </div>
+  )
+}

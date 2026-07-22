@@ -1,4 +1,5 @@
 import { Navigate, Route } from 'react-router-dom'
+import type { ReactElement } from 'react'
 import type { NavEntry, PortalNavConfig } from '../config/navigation'
 import { PlaceholderPage } from '../pages/PlaceholderPage'
 
@@ -13,18 +14,25 @@ function childBreadcrumb(sectionLabel: string, childLabel: string, config: Porta
   return `${config.portalLabel} › ${sectionLabel} › ${childLabel}`
 }
 
-function routeForEntry(entry: NavEntry, config: PortalNavConfig) {
+function routeForEntry(
+  entry: NavEntry,
+  config: PortalNavConfig,
+  pageOverrides?: Record<string, ReactElement>,
+) {
   if (entry.type === 'item') {
     const relativePath = entry.path.replace(`${config.basePath}/`, '')
+    const override = pageOverrides?.[entry.path]
     return (
       <Route
         key={entry.path}
         path={relativePath}
         element={
-          <PlaceholderPage
-            title={entry.label}
-            breadcrumb={breadcrumbForEntry(entry, config)}
-          />
+          override ?? (
+            <PlaceholderPage
+              title={entry.label}
+              breadcrumb={breadcrumbForEntry(entry, config)}
+            />
+          )
         }
       />
     )
@@ -32,23 +40,31 @@ function routeForEntry(entry: NavEntry, config: PortalNavConfig) {
 
   return entry.children.map((child) => {
     const relativePath = child.path.replace(`${config.basePath}/`, '')
+    const override = pageOverrides?.[child.path]
     return (
       <Route
         key={child.path}
         path={relativePath}
         element={
-          <PlaceholderPage
-            title={child.label}
-            breadcrumb={childBreadcrumb(entry.label, child.label, config)}
-          />
+          override ?? (
+            <PlaceholderPage
+              title={child.label}
+              breadcrumb={childBreadcrumb(entry.label, child.label, config)}
+            />
+          )
         }
       />
     )
   })
 }
 
-export function createPortalChildRoutes(config: PortalNavConfig) {
-  const routes = config.entries.flatMap((entry) => routeForEntry(entry, config))
+export function createPortalChildRoutes(
+  config: PortalNavConfig,
+  pageOverrides?: Record<string, ReactElement>,
+) {
+  const routes = config.entries.flatMap((entry) =>
+    routeForEntry(entry, config, pageOverrides),
+  )
 
   return (
     <>
