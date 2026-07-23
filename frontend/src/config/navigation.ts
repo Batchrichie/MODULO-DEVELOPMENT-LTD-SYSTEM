@@ -52,6 +52,16 @@ export const PORTAL_NAV: Record<UserRole, PortalNavConfig> = {
       { type: 'item', label: 'Trial Balance', path: '/accountant/trial-balance', icon: 'TB' },
       {
         type: 'section',
+        label: 'Invoicing & Expenses',
+        children: [
+          { label: 'Invoicing', path: '/accountant/invoicing-expenses/invoicing', icon: 'IV' },
+          { label: 'Customer Payments', path: '/accountant/invoicing-expenses/customer-payments', icon: 'CP' },
+          { label: 'Expenses', path: '/accountant/invoicing-expenses/expenses', icon: 'EX' },
+          { label: 'Supplier Payments', path: '/accountant/invoicing-expenses/supplier-payments', icon: 'SP' },
+        ],
+      },
+      {
+        type: 'section',
         label: 'Payroll & HR',
         children: [
           { label: 'Employee Records', path: '/accountant/payroll-hr/employee-records', icon: 'ER' },

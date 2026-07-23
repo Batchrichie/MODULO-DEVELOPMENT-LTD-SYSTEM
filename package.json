@@ -1,0 +1,9 @@
+{
+  "name": "modulo-development-ltd-system",
+  "private": true,
+  "scripts": {
+    "dev": "vite --config frontend/vite.config.ts --root frontend --host 127.0.0.1",
+    "build": "tsc -b frontend/tsconfig.json && vite --config frontend/vite.config.ts --root frontend build",
+    "preview": "vite --config frontend/vite.config.ts --root frontend preview"
+  }
+}

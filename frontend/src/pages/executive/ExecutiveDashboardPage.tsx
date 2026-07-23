@@ -17,11 +17,19 @@ type LoadState =
 
 const TAX_TYPES = ['VAT', 'NHIL', 'GETFund', 'PAYE', 'SSNIT'] as const
 
-function KpiTile({ label, value }: { label: string; value: string }) {
+function StatCard({ label, value, tone, icon }: { label: string; value: string; tone: string; icon: string }) {
   return (
-    <div className="exec-dash__kpi">
-      <span className="exec-dash__kpi-label">{label}</span>
-      <span className="exec-dash__kpi-value">{value}</span>
+    <div className="stat-card">
+      <div className={`stat-card__icon stat-card__icon--${tone}`}>
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d={statPath(icon)} />
+        </svg>
+      </div>
+      <div className="stat-card__content">
+        <span>{label}</span>
+        <strong>{value}</strong>
+        <small>Live view</small>
+      </div>
     </div>
   )
 }
@@ -106,6 +114,19 @@ function AlertsPanel({ alerts }: { alerts: ExecutiveAlert[] }) {
   )
 }
 
+function statPath(icon: string) {
+  const paths: Record<string, string> = {
+    cash: 'M4 7h16v10H4zM4 10h16',
+    revenue: 'M5 19V9m7 10V5m7 14v-7',
+    profit: 'M5 15l4-4 3 3 7-8',
+    projects: 'M4 6h16v12H4zM8 6v12m8-12v12',
+    tax: 'M5 7h14M7 12h10m-8 5h6',
+    alerts: 'M12 4a4 4 0 0 1 4 4v2.2c0 .4.1.8.3 1.2l1.1 2.8a1 1 0 0 1-.9 1.4H7.5a1 1 0 0 1-.9-1.4l1.1-2.8c.2-.4.3-.8.3-1.2V8a4 4 0 0 1 4-4Z',
+  }
+
+  return paths[icon] ?? paths.cash
+}
+
 export function ExecutiveDashboardPage() {
   const [state, setState] = useState<LoadState>({ status: 'loading' })
 
@@ -141,39 +162,75 @@ export function ExecutiveDashboardPage() {
 
   if (state.status === 'loading') {
     return (
-      <div className="exec-dash" role="status" aria-live="polite">
-        <p className="exec-dash__breadcrumb">Section 4.1 — Executive Dashboard (view-only)</p>
-        <p className="exec-dash__state-message">Loading executive dashboard…</p>
-        <div className="exec-dash__kpi-grid exec-dash__kpi-grid--loading">
+      <article className="admin-dashboard" role="status" aria-live="polite">
+        <header className="admin-dashboard__header">
+          <div>
+            <p className="admin-dashboard__eyebrow">Leadership</p>
+            <h1>Executive Dashboard</h1>
+            <p>Track cash, revenue, tax obligations, and delivery health from one view.</p>
+          </div>
+        </header>
+        <section className="admin-dashboard__stats" aria-label="Executive metrics">
           {['Cash Position', 'Revenue (period)', 'Net Profit', 'Active Projects'].map((label) => (
-            <div key={label} className="exec-dash__kpi exec-dash__kpi--skeleton">
-              <span className="exec-dash__kpi-label">{label}</span>
-              <span className="exec-dash__skeleton-bar" />
+            <div key={label} className="stat-card">
+              <div className="stat-card__icon stat-card__icon--blue">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d={statPath('cash')} /></svg>
+              </div>
+              <div className="stat-card__content">
+                <span>{label}</span>
+                <strong>Loading…</strong>
+                <small>Live view</small>
+              </div>
             </div>
           ))}
-        </div>
-      </div>
+        </section>
+        <section className="users-card">
+          <div className="users-card__header">
+            <div>
+              <h2>Executive Snapshot</h2>
+              <p>Performance signals and current action items will appear here.</p>
+            </div>
+          </div>
+          <div className="exec-dash__state-card exec-dash__state-card--empty">
+            <p className="exec-dash__state-message">Loading executive dashboard…</p>
+          </div>
+        </section>
+      </article>
     )
   }
 
   if (state.status === 'error') {
     return (
-      <div className="exec-dash" role="alert">
-        <p className="exec-dash__breadcrumb">Section 4.1 — Executive Dashboard (view-only)</p>
-        <div className="exec-dash__state-card exec-dash__state-card--error">
-          <h2 className="exec-dash__state-title">Unable to load dashboard</h2>
-          <p className="exec-dash__state-message">{state.message}</p>
-          {state.code && (
-            <p className="exec-dash__state-code">
-              Error code: <code>{state.code}</code>
+      <article className="admin-dashboard" role="alert">
+        <header className="admin-dashboard__header">
+          <div>
+            <p className="admin-dashboard__eyebrow">Leadership</p>
+            <h1>Executive Dashboard</h1>
+            <p>Track cash, revenue, tax obligations, and delivery health from one view.</p>
+          </div>
+        </header>
+        <section className="users-card">
+          <div className="users-card__header">
+            <div>
+              <h2>Executive Snapshot</h2>
+              <p>Performance signals and current action items will appear here.</p>
+            </div>
+          </div>
+          <div className="exec-dash__state-card exec-dash__state-card--error">
+            <h2 className="exec-dash__state-title">Unable to load dashboard</h2>
+            <p className="exec-dash__state-message">{state.message}</p>
+            {state.code && (
+              <p className="exec-dash__state-code">
+                Error code: <code>{state.code}</code>
+              </p>
+            )}
+            <p className="exec-dash__state-hint">
+              This screen calls <code>dashboard_executive()</code> only. If the function is missing
+              or your role is unauthorized, contact an administrator.
             </p>
-          )}
-          <p className="exec-dash__state-hint">
-            This screen calls <code>dashboard_executive()</code> only. If the function is missing
-            or your role is unauthorized, contact an administrator.
-          </p>
-        </div>
-      </div>
+          </div>
+        </section>
+      </article>
     )
   }
 
@@ -181,33 +238,48 @@ export function ExecutiveDashboardPage() {
   const taxDataMissing = data.taxStatus === null
 
   return (
-    <div className="exec-dash">
-      <p className="exec-dash__breadcrumb">Section 4.1 — Executive Dashboard (view-only)</p>
-
-      {state.status === 'empty' && (
-        <div className="exec-dash__state-card exec-dash__state-card--empty" role="status">
-          <p className="exec-dash__state-message">
-            Dashboard loaded but contains no project or financial activity yet.
-          </p>
+    <article className="admin-dashboard">
+      <header className="admin-dashboard__header">
+        <div>
+          <p className="admin-dashboard__eyebrow">Leadership</p>
+          <h1>Executive Dashboard</h1>
+          <p>Track cash, revenue, tax obligations, and delivery health from one view.</p>
         </div>
-      )}
+      </header>
 
-      <div className="exec-dash__kpi-grid">
-        <KpiTile label="Cash Position" value={formatMoneyGhs(data.cashPosition)} />
-        <KpiTile label="Revenue (period)" value={formatMoneyGhs(data.revenue)} />
-        <KpiTile label="Net Profit" value={formatMoneyGhs(data.netProfit)} />
-        <KpiTile label="Active Projects" value={formatCount(data.activeProjects)} />
-      </div>
+      <section className="admin-dashboard__stats" aria-label="Executive metrics">
+        <StatCard label="Cash Position" value={formatMoneyGhs(data.cashPosition)} tone="green" icon="cash" />
+        <StatCard label="Revenue (period)" value={formatMoneyGhs(data.revenue)} tone="blue" icon="revenue" />
+        <StatCard label="Net Profit" value={formatMoneyGhs(data.netProfit)} tone="purple" icon="profit" />
+        <StatCard label="Active Projects" value={formatCount(data.activeProjects)} tone="orange" icon="projects" />
+      </section>
 
-      <div className="exec-dash__row">
-        <MockChartPanel title="Project Profitability" />
-        <MockChartPanel title="Equipment Rental Revenue" />
-      </div>
+      <section className="users-card">
+        <div className="users-card__header">
+          <div>
+            <h2>Executive Snapshot</h2>
+            <p>High-level operational signals and immediate follow-up items.</p>
+          </div>
+        </div>
 
-      <div className="exec-dash__row">
-        <TaxStatusPanel items={data.taxStatus} taxDataMissing={taxDataMissing} />
-        <AlertsPanel alerts={data.alerts} />
-      </div>
-    </div>
+        {state.status === 'empty' && (
+          <div className="exec-dash__state-card exec-dash__state-card--empty" role="status">
+            <p className="exec-dash__state-message">
+              Dashboard loaded but contains no project or financial activity yet.
+            </p>
+          </div>
+        )}
+
+        <div className="exec-dash__row">
+          <MockChartPanel title="Project Profitability" />
+          <MockChartPanel title="Equipment Rental Revenue" />
+        </div>
+
+        <div className="exec-dash__row">
+          <TaxStatusPanel items={data.taxStatus} taxDataMissing={taxDataMissing} />
+          <AlertsPanel alerts={data.alerts} />
+        </div>
+      </section>
+    </article>
   )
 }

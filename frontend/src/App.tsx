@@ -7,6 +7,13 @@ import { PortalLayout } from './layouts/PortalLayout'
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage'
 import { LoginPage } from './pages/LoginPage'
 import { ExecutiveDashboardPage } from './pages/executive/ExecutiveDashboardPage'
+import { AccountantCoaPage } from './pages/accountant/AccountantCoaPage'
+import { AccountantJournalEntriesPage } from './pages/accountant/AccountantJournalEntriesPage'
+import { AccountantTrialBalancePage } from './pages/accountant/AccountantTrialBalancePage'
+import { InvoicingPage } from './pages/accountant/InvoicingPage'
+import { CustomerPaymentsPage } from './pages/accountant/CustomerPaymentsPage'
+import { ExpensesPage } from './pages/accountant/ExpensesPage'
+import { SupplierPaymentsPage } from './pages/accountant/SupplierPaymentsPage'
 import { createPortalChildRoutes } from './routes/portalRoutes'
 
 function RootRedirect() {
@@ -55,7 +62,15 @@ function App() {
           </RouteGuard>
         }
       >
-        {createPortalChildRoutes(PORTAL_NAV.Accountant)}
+        {createPortalChildRoutes(PORTAL_NAV.Accountant, {
+          '/accountant/chart-of-accounts': <AccountantCoaPage />,
+          '/accountant/journal-entries': <AccountantJournalEntriesPage />,
+          '/accountant/trial-balance': <AccountantTrialBalancePage />,
+          '/accountant/invoicing-expenses/invoicing': <InvoicingPage />,
+          '/accountant/invoicing-expenses/customer-payments': <CustomerPaymentsPage />,
+          '/accountant/invoicing-expenses/expenses': <ExpensesPage />,
+          '/accountant/invoicing-expenses/supplier-payments': <SupplierPaymentsPage />,
+        })}
       </Route>
 
       <Route
