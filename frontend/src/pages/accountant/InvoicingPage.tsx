@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { formatMoneyGhs } from '../../lib/formatMoney'
-import { invoiceCreate, fetchTaxRates, type TaxRates } from '../../lib/rpc/accountant'
+import { invoiceCreate, fetchTaxRates, normalizeTaxRates, type TaxRates } from '../../lib/rpc/accountant'
 import { supabase } from '../../lib/supabase'
 import '../../styles/executive-dashboard.css'
 
@@ -26,15 +26,6 @@ const emptyForm = (): InvoiceFormState => ({
   apply_nhil: false,
   apply_getfund: false,
 })
-
-function mapRates(rows: Array<{ tax_type?: string | null; rate?: number | null }>): TaxRates {
-  return rows.reduce((acc, row) => {
-    if (row.tax_type && typeof row.rate === 'number') {
-      acc[row.tax_type] = row.rate
-    }
-    return acc
-  }, {} as TaxRates)
-}
 
 export function InvoicingPage() {
   const [form, setForm] = useState<InvoiceFormState>(emptyForm())
@@ -89,7 +80,7 @@ export function InvoicingPage() {
     if (!taxResult.ok) {
       setError((current) => current ? `${current}; Failed to load tax rates: ${taxResult.error}` : `Failed to load tax rates: ${taxResult.error}`)
     } else {
-      setTaxRates(mapRates(taxResult.data))
+      setTaxRates(normalizeTaxRates(taxResult.data))
     }
 
     setLoading(false)
@@ -382,3 +373,5 @@ export function InvoicingPage() {
     </article>
   )
 }
+
+
