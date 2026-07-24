@@ -24,7 +24,17 @@ export async function fetchDashboardExecutive(): Promise<DashboardExecutiveResul
     }
   }
 
-  const parsed = parseExecutiveDashboard(data)
+  // Parse the envelope returned by api.ok()/api.err()
+  const envelope = data as { success: boolean; data: unknown; error: { code: string; message: string } | null } | null
+  if (!envelope || envelope.success === false) {
+    return {
+      ok: false,
+      error: envelope?.error?.message ?? 'Unknown error',
+      code: envelope?.error?.code,
+    }
+  }
+
+  const parsed = parseExecutiveDashboard(envelope.data)
   return { ok: true, data: parsed, raw: data }
 }
 

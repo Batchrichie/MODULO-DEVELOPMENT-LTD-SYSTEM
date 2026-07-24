@@ -1,6 +1,101 @@
 import { NavLink } from 'react-router-dom'
 import type { NavEntry, PortalNavConfig } from '../config/navigation'
 import { UserMenu } from './UserMenu'
+import { companyProfile } from '../config/companyProfile'
+import {
+  LayoutDashboard,
+  LineChart,
+  Layers,
+  Truck,
+  Landmark,
+  FileBarChart,
+  Bell,
+  BookOpen,
+  NotebookPen,
+  BookText,
+  Scale,
+  FileText,
+  CreditCard,
+  Receipt,
+  Banknote,
+  Users,
+  Wallet,
+  HandCoins,
+  Building2,
+  Coins,
+  UsersRound,
+  Archive,
+  ClipboardList,
+  FileClock,
+  PieChart,
+  BarChart3,
+  FileCheck,
+  UserCircle2,
+  Settings,
+  ShieldCheck,
+  History,
+  FolderKanban,
+  Calculator,
+  CheckSquare,
+  TrendingUp,
+  FolderOpen,
+  CalendarDays,
+  Briefcase,
+  Megaphone,
+  Shield,
+  type LucideIcon,
+} from 'lucide-react'
+
+const ICON_SIZE = 14
+const ICON_STROKE = 1.6
+
+const iconMap: Record<string, LucideIcon> = {
+  LayoutDashboard,
+  LineChart,
+  Layers,
+  Truck,
+  Landmark,
+  FileBarChart,
+  Bell,
+  BookOpen,
+  NotebookPen,
+  BookText,
+  Scale,
+  FileText,
+  CreditCard,
+  Receipt,
+  Banknote,
+  Users,
+  Wallet,
+  HandCoins,
+  Building2,
+  Coins,
+  UsersRound,
+  Archive,
+  ClipboardList,
+  FileClock,
+  PieChart,
+  BarChart3,
+  FileCheck,
+  UserCircle2,
+  Settings,
+  ShieldCheck,
+  History,
+  FolderKanban,
+  Calculator,
+  CheckSquare,
+  TrendingUp,
+  FolderOpen,
+  CalendarDays,
+  Briefcase,
+  Megaphone,
+  Shield,
+}
+
+function SidebarIcon({ name }: { name: string }) {
+  const Icon = iconMap[name] ?? LayoutDashboard
+  return <Icon size={ICON_SIZE} strokeWidth={ICON_STROKE} />
+}
 
 interface SidebarProps {
   config: PortalNavConfig
@@ -36,24 +131,12 @@ function NavItemLink({
       onClick={onNavigate}
     >
       <span className="sidebar__icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24"><path d={iconPath(icon)} /></svg>
+        <SidebarIcon name={icon} />
       </span>
       <span className="sidebar__label">{label}</span>
       {badge && <span className={`sidebar__badge${badgeTone === 'warning' ? ' sidebar__badge--warning' : ''}`}>{badge}</span>}
     </NavLink>
   )
-}
-
-function iconPath(icon: string) {
-  const paths: Record<string, string> = {
-    users: 'M16 20v-1.5a3.5 3.5 0 0 0-3.5-3.5h-5A3.5 3.5 0 0 0 4 18.5V20m6-9a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm5.5-5.4a3 3 0 0 1 0 5.8M16 15h1.5a3.5 3.5 0 0 1 3.5 3.5V20',
-    building: 'M4 20V5l8-2 8 2v15M8 8h1m-1 4h1m6-4h1m-1 4h1M9 20v-4h6v4',
-    layers: 'm12 3 9 5-9 5-9-5 9-5Zm-9 9 9 5 9-5M3 16l9 5 9-5',
-    site: 'M4 20V7l8-4 8 4v13M9 20v-6h6v6M7 9h.01M12 9h.01M17 9h.01',
-    chart: 'M4 19V5m0 14h16M8 16v-4m4 4V8m4 8V5',
-    report: 'M6 3h9l3 3v15H6V3Zm3 5h5m-5 4h5m-5 4h3',
-  }
-  return paths[icon] ?? 'M5 5h14v14H5z'
 }
 
 function renderEntry(
@@ -114,8 +197,8 @@ export function Sidebar({ config, collapsed, drawerOpen, onCloseDrawer }: Sideba
       >
         <div className="sidebar__inner">
           <div className="sidebar__brand">
-            <span className="sidebar__brand-mark">B</span>
-            {!collapsed && <span><strong>BuildCore</strong><small>{config.portalLabel}</small></span>}
+            <span className="sidebar__brand-mark">{companyProfile.name?.charAt(0).toUpperCase() ?? 'C'}</span>
+            {!collapsed && <span><strong>{companyProfile.name}</strong><small>{config.portalLabel}</small></span>}
           </div>
           {!collapsed && <label className="sidebar__search"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m20 20-4.2-4.2m1.2-5.3a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0Z" /></svg><input placeholder="Search" aria-label="Search navigation" /><kbd>⌘ K</kbd></label>}
           {config.entries.map((entry) => renderEntry(entry, collapsed, onCloseDrawer))}

@@ -14,6 +14,16 @@ import { InvoicingPage } from './pages/accountant/InvoicingPage'
 import { CustomerPaymentsPage } from './pages/accountant/CustomerPaymentsPage'
 import { ExpensesPage } from './pages/accountant/ExpensesPage'
 import { SupplierPaymentsPage } from './pages/accountant/SupplierPaymentsPage'
+import { EmployeeRecordsPage } from './pages/accountant/EmployeeRecordsPage'
+import { PayrollPage } from './pages/accountant/PayrollPage'
+import { AssetRegisterPage } from './pages/accountant/AssetRegisterPage'
+import { PpeSchedulePage } from './pages/accountant/PpeSchedulePage'
+import { DepreciationJournalPage } from './pages/accountant/DepreciationJournalPage'
+import { RentalsPage } from './pages/accountant/RentalsPage'
+import { TaxPage } from './pages/accountant/TaxPage'
+import { MyProjectsPage } from './pages/projectManager/MyProjectsPage'
+import { CompletionAssessmentsPage } from './pages/projectManager/CompletionAssessmentsPage'
+import { BudgetTrackingPage } from './pages/projectManager/BudgetTrackingPage'
 import { createPortalChildRoutes } from './routes/portalRoutes'
 
 function RootRedirect() {
@@ -70,6 +80,13 @@ function App() {
           '/accountant/invoicing-expenses/customer-payments': <CustomerPaymentsPage />,
           '/accountant/invoicing-expenses/expenses': <ExpensesPage />,
           '/accountant/invoicing-expenses/supplier-payments': <SupplierPaymentsPage />,
+          '/accountant/payroll-hr/employee-records': <EmployeeRecordsPage />,
+          '/accountant/payroll-hr/payroll': <PayrollPage />,
+          '/accountant/asset-management/asset-register': <AssetRegisterPage />,
+          '/accountant/asset-management/ppe-schedule': <PpeSchedulePage />,
+          '/accountant/asset-management/depreciation-journal': <DepreciationJournalPage />,
+          '/accountant/asset-management/rentals': <RentalsPage />,
+          '/accountant/compliance-tax/tax': <TaxPage />,
         })}
       </Route>
 
@@ -81,7 +98,11 @@ function App() {
           </RouteGuard>
         }
       >
-        {createPortalChildRoutes(PORTAL_NAV.ProjectManager)}
+        {createPortalChildRoutes(PORTAL_NAV.ProjectManager, {
+          '/project-manager/my-projects': <MyProjectsPage />,
+          '/project-manager/completion-assessments': <CompletionAssessmentsPage />,
+          '/project-manager/budget-tracking': <BudgetTrackingPage />,
+        })}
       </Route>
 
       <Route

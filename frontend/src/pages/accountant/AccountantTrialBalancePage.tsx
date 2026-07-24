@@ -136,16 +136,18 @@ export function AccountantTrialBalancePage() {
         <div className="exec-dash__row">
           <div className="exec-dash__panel">
             <div className="exec-dash__panel-title">Report parameters</div>
-            <label>
-              As of date
-              <input type="date" value={asOf} onChange={(event) => setAsOf(event.target.value)} style={{ display: 'block', width: '100%', marginTop: '0.25rem', marginBottom: '0.75rem' }} />
+            <label className="form-field">
+              <span className="form-field__label">As of date</span>
+              <input type="date" value={asOf} onChange={(event) => setAsOf(event.target.value)} />
             </label>
-            <button type="button" className="button button--primary" onClick={() => void loadTrialBalance()}>Refresh report</button>
+            <div className="form-actions">
+              <button type="button" className="button button--primary" onClick={() => void loadTrialBalance()}>Refresh report</button>
+            </div>
           </div>
           <div className="exec-dash__panel">
             <div className="exec-dash__panel-title">Summary</div>
             <p className="exec-dash__mock-note">Totals shown in GHS with two decimal places.</p>
-            <div className="exec-dash__kpi-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+            <div className="exec-dash__kpi-grid exec-dash__kpi-grid--3">
               <div className="exec-dash__kpi"><span className="exec-dash__kpi-label">Debit</span><strong className="exec-dash__kpi-value">{formatMoneyGhs(totals.debit)}</strong></div>
               <div className="exec-dash__kpi"><span className="exec-dash__kpi-label">Credit</span><strong className="exec-dash__kpi-value">{formatMoneyGhs(totals.credit)}</strong></div>
               <div className="exec-dash__kpi"><span className="exec-dash__kpi-label">Difference</span><strong className="exec-dash__kpi-value">{formatMoneyGhs(totals.difference)}</strong></div>
@@ -153,30 +155,30 @@ export function AccountantTrialBalancePage() {
           </div>
         </div>
 
-        <div className="exec-dash__panel" style={{ margin: '0 21px 21px' }}>
+        <div className="exec-dash__panel exec-dash__panel--standalone">
           <div className="exec-dash__panel-title">Trial balance rows</div>
           {!rows.length ? (
             <div className="exec-dash__state-card exec-dash__state-card--empty"><h2 className="exec-dash__state-title">No trial balance rows</h2><p className="exec-dash__state-message">No balances are available for this date.</p></div>
           ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <div className="table-wrapper">
+              <table className="data-table">
                 <thead>
                   <tr>
-                    <th style={{ textAlign: 'left', padding: '0.5rem' }}>Code</th>
-                    <th style={{ textAlign: 'left', padding: '0.5rem' }}>Account</th>
-                    <th style={{ textAlign: 'right', padding: '0.5rem' }}>Debit</th>
-                    <th style={{ textAlign: 'right', padding: '0.5rem' }}>Credit</th>
-                    <th style={{ textAlign: 'right', padding: '0.5rem' }}>Balance</th>
+                    <th>Code</th>
+                    <th>Account</th>
+                    <th className="data-table__num">Debit</th>
+                    <th className="data-table__num">Credit</th>
+                    <th className="data-table__num">Balance</th>
                   </tr>
                 </thead>
                 <tbody>
                   {rows.map((row) => (
                     <tr key={row.account_id ?? row.account_code ?? row.code ?? row.name ?? Math.random().toString()}>
-                      <td style={{ padding: '0.5rem' }}>{row.account_code ?? row.code ?? '—'}</td>
-                      <td style={{ padding: '0.5rem' }}>{row.account_name ?? row.name ?? '—'}</td>
-                      <td style={{ textAlign: 'right', padding: '0.5rem' }}>{formatMoneyGhs(Number(row.debit ?? 0) || 0)}</td>
-                      <td style={{ textAlign: 'right', padding: '0.5rem' }}>{formatMoneyGhs(Number(row.credit ?? 0) || 0)}</td>
-                      <td style={{ textAlign: 'right', padding: '0.5rem' }}>{formatMoneyGhs(Number(row.balance ?? 0) || 0)}</td>
+                      <td>{row.account_code ?? row.code ?? '—'}</td>
+                      <td>{row.account_name ?? row.name ?? '—'}</td>
+                      <td className="data-table__num">{formatMoneyGhs(Number(row.debit ?? 0) || 0)}</td>
+                      <td className="data-table__num">{formatMoneyGhs(Number(row.credit ?? 0) || 0)}</td>
+                      <td className="data-table__num">{formatMoneyGhs(Number(row.balance ?? 0) || 0)}</td>
                     </tr>
                   ))}
                 </tbody>

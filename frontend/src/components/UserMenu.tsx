@@ -8,6 +8,7 @@ export function UserMenu() {
   const { signOut } = useAuth()
   const { theme, toggleTheme } = useTheme()
   const navigate = useNavigate()
+  const { appUser } = useAuth()
 
   async function handleLogout() {
     await signOut()
@@ -18,8 +19,8 @@ export function UserMenu() {
     <div className="user-menu">
       {open && <button className="user-menu__backdrop" type="button" aria-label="Close account menu" onClick={() => setOpen(false)} />}
       <button type="button" className="user-menu__trigger" aria-expanded={open} aria-haspopup="menu" onClick={() => setOpen((value) => !value)}>
-        <span className="user-menu__avatar">JD</span>
-        <span className="user-menu__identity"><strong>John Doe</strong><small>Super Admin</small></span>
+        <span className="user-menu__avatar">{(appUser?.email || 'U').charAt(0).toUpperCase()}</span>
+        <span className="user-menu__identity"><strong>{appUser?.email ?? 'Unknown'}</strong><small>{appUser?.role ?? ''}</small></span>
         <svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4" /></svg>
       </button>
       {open && (

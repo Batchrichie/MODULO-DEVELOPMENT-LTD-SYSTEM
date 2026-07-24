@@ -1,7 +1,22 @@
 import { useEffect, useMemo, useState } from 'react'
 import { formatMoneyGhs } from '../../lib/formatMoney'
 import { supabase } from '../../lib/supabase'
+import { ConfirmDialog } from '../../components/ConfirmDialog'
+import { EmptyState } from '../../components/EmptyState'
+import { PendingBackendNotice } from '../../components/PendingBackendNotice'
+import { deriveStatusBadgeFromState, StatusBadge } from '../../components/StatusBadge'
 import '../../styles/executive-dashboard.css'
+
+function unwrapRpcResponse<T>(data: unknown): { ok: boolean; value: T | null; error: string | null } {
+  const envelope = data as { success?: boolean; data: T; error?: { code: string; message: string } | null } | null
+  if (!envelope) {
+    return { ok: false, value: null, error: 'No response from server' }
+  }
+  if (envelope.success === false) {
+    return { ok: false, value: null, error: envelope.error?.message ?? 'Unknown error' }
+  }
+  return { ok: true, value: envelope.data, error: null }
+}
 
 interface PayrollRunRecord {
   run_id?: string
@@ -40,22 +55,44 @@ interface SettlementAccountRecord {
   payment_method_type?: string | null
 }
 
+type ApproveTarget = { runId: string; period?: string } | null
+type RejectTarget = { runId: string; period?: string } | null
+type PayTarget = { runId: string; period?: string } | null
+
 export function PayrollPage() {
   const [employees, setEmployees] = useState<EmployeeRecord[]>([])
   const [settlementAccounts, setSettlementAccounts] = useState<SettlementAccountRecord[]>([])
   const [createdRun, setCreatedRun] = useState<PayrollRunRecord | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [formError, setFormError] = useState<string | null>(null)
   const [runPeriod, setRunPeriod] = useState(new Date().toISOString().slice(0, 7))
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null)
   const [selectedSettlementAccountId, setSelectedSettlementAccountId] = useState<string>('')
   const [submitting, setSubmitting] = useState(false)
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
   const [showModal, setShowModal] = useState(false)
+  const [approveTarget, setApproveTarget] = useState<ApproveTarget>(null)
+  const [rejectTarget, setRejectTarget] = useState<RejectTarget>(null)
+  const [payTarget, setPayTarget] = useState<PayTarget>(null)
 
   useEffect(() => {
     void loadAllData()
   }, [])
+
+  useEffect(() => {
+    if (!showModal) return
+    function onKey(event: KeyboardEvent) {
+      if (event.key === 'Escape') setShowModal(false)
+    }
+    document.addEventListener('keydown', onKey)
+    const originalOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      document.body.style.overflow = originalOverflow
+    }
+  }, [showModal])
 
   async function loadAllData() {
     setLoading(true)
@@ -75,19 +112,29 @@ export function PayrollPage() {
       setError(employeesResult.error.message)
       setEmployees([])
     } else {
-      setEmployees(Array.isArray(employeesResult.data) ? employeesResult.data : employeesResult.data?.rows || employeesResult.data?.data || [])
+      const unwrapped = unwrapRpcResponse<EmployeeRecord[]>(employeesResult.data)
+      if (!unwrapped.ok) {
+        setError(unwrapped.error)
+        setEmployees([])
+      } else {
+        setEmployees(Array.isArray(unwrapped.value) ? unwrapped.value : [])
+      }
     }
 
     if (settlementAccountsResult.error) {
       setError((current) => current ? `${current}; ${settlementAccountsResult.error.message}` : settlementAccountsResult.error.message)
       setSettlementAccounts([])
     } else {
-      const accounts = Array.isArray(settlementAccountsResult.data)
-        ? settlementAccountsResult.data
-        : settlementAccountsResult.data?.rows || settlementAccountsResult.data?.data || []
-      setSettlementAccounts(accounts)
-      if (!selectedSettlementAccountId && accounts.length > 0) {
-        setSelectedSettlementAccountId(accounts[0].account_id ?? accounts[0].id ?? '')
+      const unwrapped = unwrapRpcResponse<SettlementAccountRecord[]>(settlementAccountsResult.data)
+      if (!unwrapped.ok) {
+        setError((current) => current ? `${current}; ${unwrapped.error}` : unwrapped.error)
+        setSettlementAccounts([])
+      } else {
+        const accounts = Array.isArray(unwrapped.value) ? unwrapped.value : []
+        setSettlementAccounts(accounts)
+        if (!selectedSettlementAccountId && accounts.length > 0) {
+          setSelectedSettlementAccountId(accounts[0].account_id ?? accounts[0].id ?? '')
+        }
       }
     }
 
@@ -113,104 +160,187 @@ export function PayrollPage() {
     })
   }, [employees])
 
+  const runTotals = useMemo(() => {
+    if (selectedRunPayslips.length === 0) return null
+    return selectedRunPayslips.reduce(
+      (acc, p) => ({
+        gross: acc.gross + (Number(p.gross_salary ?? 0) || 0),
+        paye: acc.paye + (Number(p.paye ?? 0) || 0),
+        ssnitEmp: acc.ssnitEmp + (Number(p.ssnit_employee ?? 0) || 0),
+        ssnitEmpLr: acc.ssnitEmpLr + (Number(p.ssnit_employer ?? 0) || 0),
+        other: acc.other + (Number(p.other_deductions ?? 0) || 0),
+        net: acc.net + (Number(p.net_salary ?? 0) || 0),
+      }),
+      { gross: 0, paye: 0, ssnitEmp: 0, ssnitEmpLr: 0, other: 0, net: 0 } as { gross: number; paye: number; ssnitEmp: number; ssnitEmpLr: number; other: number; net: number }
+    )
+  }, [selectedRunPayslips])
+
   async function createRun() {
     setSubmitting(true)
-    setError(null)
+    setFormError(null)
     setStatusMessage(null)
 
     if (blockingEmployees.length > 0) {
-      setError(`Payroll run blocked for named employees: ${blockingEmployees.map((employee) => employee.full_name ?? 'Unknown employee').join(', ')}. Every active employee must have staff_category set.`)
+      setFormError(`Payroll run blocked for named employees: ${blockingEmployees.map((employee) => employee.full_name ?? 'Unknown employee').join(', ')}. Every active employee must have staff_category set.`)
       setSubmitting(false)
       return
     }
 
-    const { data, error } = await supabase.schema('api').rpc('payroll_run_create', {
+    const { data, error: rpcError } = await supabase.schema('api').rpc('payroll_run_create', {
       period: runPeriod,
     })
 
-    if (error) {
-      setError(error.message)
+    if (rpcError) {
+      setFormError(rpcError.message)
       setSubmitting(false)
       return
     }
 
-    const payload = data as Record<string, unknown>
+    const unwrapped = unwrapRpcResponse<Record<string, unknown>>(data)
+    if (!unwrapped.ok) {
+      setFormError(unwrapped.error)
+      setSubmitting(false)
+      return
+    }
+
+    const payload = unwrapped.value
+    if (!payload) {
+      setFormError('Empty response from payroll_run_create')
+      setSubmitting(false)
+      return
+    }
+
     const runId = String(payload.run_id ?? payload.id ?? '')
-    const payslips = Array.isArray(payload.payslips)
-      ? payload.payslips as PayslipRecord[]
-      : Array.isArray((payload.data as Record<string, unknown> | undefined)?.payslips)
-        ? ((payload.data as Record<string, unknown>).payslips as PayslipRecord[])
-        : []
+    const payslips = Array.isArray(payload.payslips) ? (payload.payslips as PayslipRecord[]) : []
 
     const nextRun: PayrollRunRecord = {
       run_id: runId,
       id: runId,
       period: String(payload.period ?? runPeriod),
-      status: String(payload.status ?? 'created'),
+      status: String(payload.status ?? 'Draft'),
       payslips,
     }
 
     setCreatedRun(nextRun)
     setSelectedRunId(runId)
     setShowModal(false)
-    setStatusMessage(`Payroll run ${runId} created for ${runPeriod}. ${payslips.length} payslip(s) returned from the create response.`)
+    setStatusMessage(`Payroll run ${runId} created for ${runPeriod}. ${payslips.length} payslip(s) returned — status: ${nextRun.status}.`)
     await loadAllData()
     setSubmitting(false)
   }
 
-  async function approveRun(runId: string) {
+  async function handleApproveConfirm() {
+    if (!approveTarget) return
     setSubmitting(true)
-    setError(null)
+    setFormError(null)
     setStatusMessage(null)
-    const { error } = await supabase.schema('api').rpc('payroll_run_approve', { p_run_id: runId })
-    if (error) {
-      setError(error.message)
+    const { data, error: rpcError } = await supabase.schema('api').rpc('payroll_run_approve', { p_run_id: approveTarget.runId })
+    if (rpcError) {
+      setFormError(rpcError.message)
     } else {
-      setStatusMessage(`Payroll run ${runId} has been approved.`)
-      await loadAllData()
+      const unwrapped = unwrapRpcResponse<unknown>(data)
+      if (!unwrapped.ok) {
+        setFormError(unwrapped.error)
+      } else {
+        setStatusMessage(`Payroll run ${approveTarget.runId} has been approved.`)
+        setCreatedRun((current) => current && (current.run_id ?? current.id) === approveTarget.runId ? { ...current, status: 'Approved' } : current)
+        await loadAllData()
+      }
     }
+    setApproveTarget(null)
     setSubmitting(false)
   }
 
-  async function rejectRun(runId: string) {
+  async function handleRejectConfirm(_reason?: string) {
+    if (!rejectTarget) return
     setSubmitting(true)
-    setError(null)
+    setFormError(null)
     setStatusMessage(null)
-    const { error } = await supabase.schema('api').rpc('payroll_run_reject', { p_run_id: runId })
-    if (error) {
-      setError(error.message)
+    const { data, error: rpcError } = await supabase.schema('api').rpc('payroll_run_reject', { p_run_id: rejectTarget.runId })
+    if (rpcError) {
+      setFormError(rpcError.message)
     } else {
-      setStatusMessage(`Payroll run ${runId} has been rejected.`)
-      await loadAllData()
+      const unwrapped = unwrapRpcResponse<unknown>(data)
+      if (!unwrapped.ok) {
+        setFormError(unwrapped.error)
+      } else {
+        setStatusMessage(`Payroll run ${rejectTarget.runId} has been rejected${_reason ? ` (reason: ${_reason}).` : '.'}`)
+        setCreatedRun((current) => current && (current.run_id ?? current.id) === rejectTarget.runId ? { ...current, status: 'Rejected' } : current)
+        await loadAllData()
+      }
     }
+    setRejectTarget(null)
     setSubmitting(false)
   }
 
-  async function payRun(runId: string) {
+  async function handlePayConfirm() {
+    if (!payTarget) return
     setSubmitting(true)
-    setError(null)
+    setFormError(null)
     setStatusMessage(null)
 
     if (!selectedSettlementAccountId) {
-      setError('Choose a settlement account before paying the run.')
+      setFormError('Choose a settlement account before paying the run.')
+      setPayTarget(null)
       setSubmitting(false)
       return
     }
 
-    const { error } = await supabase.schema('api').rpc('payroll_run_pay', {
-      p_run_id: runId,
-      p_payload: {
-        settlement_account_id: selectedSettlementAccountId,
-      },
+    const { data, error: rpcError } = await supabase.schema('api').rpc('payroll_run_pay', {
+      p_run_id: payTarget.runId,
+      p_payload: { settlement_account_id: selectedSettlementAccountId },
     })
-    if (error) {
-      setError(error.message)
+    if (rpcError) {
+      setFormError(rpcError.message)
     } else {
-      const selectedAccount = settlementAccounts.find((account) => (account.account_id ?? account.id) === selectedSettlementAccountId)
-      setStatusMessage(`Payroll run ${runId} has been paid using ${selectedAccount?.name ?? 'the selected settlement account'}.`)
-      await loadAllData()
+      const unwrapped = unwrapRpcResponse<unknown>(data)
+      if (!unwrapped.ok) {
+        setFormError(unwrapped.error)
+      } else {
+        const selectedAccount = settlementAccounts.find((account) => (account.account_id ?? account.id) === selectedSettlementAccountId)
+        setStatusMessage(`Payroll run ${payTarget.runId} has been paid using ${selectedAccount?.name ?? 'the selected settlement account'}.`)
+        setCreatedRun((current) => current && (current.run_id ?? current.id) === payTarget.runId ? { ...current, status: 'Paid' } : current)
+        await loadAllData()
+      }
     }
+    setPayTarget(null)
     setSubmitting(false)
+  }
+
+  function runActionButtons(run: PayrollRunRecord) {
+    const runId = run.run_id ?? run.id ?? ''
+    const status = (run.status ?? '').toLowerCase()
+    const isApprovedOrPaid = status === 'approved' || status === 'paid'
+    const isDraftOrCreated = status === 'draft' || status === 'created' || status === 'submitted'
+    return (
+      <div className="data-table__actions">
+        <button type="button" className="button button--secondary" onClick={() => setSelectedRunId(runId)}>View payslips</button>
+        <button
+          type="button"
+          className="button button--secondary"
+          onClick={() => setApproveTarget({ runId, period: run.period ?? undefined })}
+          disabled={!isDraftOrCreated || submitting}
+        >
+          Approve
+        </button>
+        <button
+          type="button"
+          className="button button--secondary"
+          onClick={() => setRejectTarget({ runId, period: run.period ?? undefined })}
+          disabled={!isDraftOrCreated || submitting}
+        >
+          Reject
+        </button>
+        <button
+          type="button"
+          className="button button--secondary"
+          onClick={() => setPayTarget({ runId, period: run.period ?? undefined })}
+          disabled={!isApprovedOrPaid || !selectedSettlementAccountId || submitting}
+        >
+          Pay
+        </button>
+      </div>
+    )
   }
 
   if (loading) {
@@ -218,7 +348,7 @@ export function PayrollPage() {
       <article className="admin-dashboard">
         <header className="admin-dashboard__header">
           <div>
-            <p className="admin-dashboard__eyebrow">Payroll & HR</p>
+            <p className="admin-dashboard__eyebrow">Payroll &amp; HR</p>
             <h1>Payroll</h1>
             <p>Review payroll runs, validate employee eligibility, and publish payments.</p>
           </div>
@@ -233,7 +363,7 @@ export function PayrollPage() {
       <article className="admin-dashboard">
         <header className="admin-dashboard__header">
           <div>
-            <p className="admin-dashboard__eyebrow">Payroll & HR</p>
+            <p className="admin-dashboard__eyebrow">Payroll &amp; HR</p>
             <h1>Payroll</h1>
             <p>Review payroll runs, validate employee eligibility, and publish payments.</p>
           </div>
@@ -247,11 +377,17 @@ export function PayrollPage() {
     <article className="admin-dashboard">
       <header className="admin-dashboard__header">
         <div>
-          <p className="admin-dashboard__eyebrow">Payroll & HR</p>
+          <p className="admin-dashboard__eyebrow">Payroll &amp; HR</p>
           <h1>Payroll</h1>
-          <p>Review payroll runs, validate employee eligibility, and publish payments.</p>
+          <p>Review payroll runs, validate employee eligibility, and publish payments. Workflow: Draft → Submitted → Approved / Rejected → Paid.</p>
         </div>
       </header>
+
+      <section className="admin-dashboard__stats" aria-label="Payroll metrics">
+        <div className="stat-card"><div className="stat-card__icon stat-card__icon--blue"><span>Σ</span></div><div className="stat-card__content"><span>Eligible employees</span><strong>{String(employees.filter((e) => e.employment_status === 'Active' && e.staff_category).length)}</strong><small>Ready for run</small></div></div>
+        <div className="stat-card"><div className="stat-card__icon stat-card__icon--orange"><span>⚠</span></div><div className="stat-card__content"><span>Missing category</span><strong>{String(blockingEmployees.length)}</strong><small>Blocks runs</small></div></div>
+        <div className="stat-card"><div className="stat-card__icon stat-card__icon--purple"><span>🏦</span></div><div className="stat-card__content"><span>Settlement accounts</span><strong>{String(settlementAccounts.length)}</strong><small>CoA payment methods</small></div></div>
+      </section>
 
       <section className="users-card">
         <div className="users-card__header">
@@ -265,10 +401,12 @@ export function PayrollPage() {
           </div>
         </div>
 
-        {statusMessage && <div className="exec-dash__state-card" style={{ marginBottom: '1rem' }}><h2 className="exec-dash__state-title">RPC response</h2><p className="exec-dash__state-message">{statusMessage}</p></div>}
+        {statusMessage && <div className="exec-dash__state-card exec-dash__state-card--inline exec-dash__state-card--success"><h2 className="exec-dash__state-title">RPC response</h2><p className="exec-dash__state-message">{statusMessage}</p></div>}
+
+        {formError && <div className="exec-dash__state-card exec-dash__state-card--error exec-dash__state-card--inline"><h2 className="exec-dash__state-title">Form error</h2><p className="exec-dash__state-message">{formError}</p></div>}
 
         {blockingEmployees.length > 0 && (
-          <div className="exec-dash__state-card exec-dash__state-card--error" style={{ marginBottom: '1rem' }}>
+          <div className="exec-dash__state-card exec-dash__state-card--warning exec-dash__state-card--inline">
             <h2 className="exec-dash__state-title">Payroll run blocked</h2>
             <p className="exec-dash__state-message">The following active employees are missing `staff_category`:</p>
             <ul>
@@ -280,28 +418,30 @@ export function PayrollPage() {
         )}
 
         <div className="exec-dash__row">
-          <section className="exec-dash__panel exec-dash__panel--mock" aria-labelledby="payroll-history-title">
+          <section className="exec-dash__panel" aria-labelledby="payroll-history-title">
             <h3 className="exec-dash__panel-title" id="payroll-history-title">Payroll history</h3>
-            <div className="exec-dash__mock-body">
-              <span className="exec-dash__mock-badge">Mock data — pending backend</span>
-              <p className="exec-dash__mock-note">
-                Historical payroll runs and payslip history are not backed by a live listing RPC in the current backend surface. The run creation, approve, reject, and pay actions remain functional; the history view is intentionally marked pending-backend.
-              </p>
-            </div>
+            <PendingBackendNotice
+              inline
+              title="History listing pending backend"
+              description="Historical payroll runs and payslip history are not backed by a live listing RPC. The run creation, approve, reject, and pay actions remain functional; the history view is pending payroll_run_list RPC."
+            />
           </section>
 
           <div className="exec-dash__panel">
             <div className="exec-dash__panel-title">Latest created run</div>
             {!createdRun ? (
-              <div className="exec-dash__state-card exec-dash__state-card--empty"><h2 className="exec-dash__state-title">No run created yet</h2><p className="exec-dash__state-message">Create a payroll run to expose its inline payslips and action controls.</p></div>
+              <EmptyState
+                icon="📊"
+                title="No run created yet"
+                description="Create a payroll run above to expose its inline payslips and action controls."
+              />
             ) : (
-              <div style={{ display: 'grid', gap: '0.75rem' }}>
-                <label style={{ display: 'block' }}>
-                  Settlement account
+              <>
+                <label className="form-field">
+                  <span className="form-field__label">Settlement account</span>
                   <select
                     value={selectedSettlementAccountId}
                     onChange={(event) => setSelectedSettlementAccountId(event.target.value)}
-                    style={{ display: 'block', width: '100%', marginTop: '0.25rem', padding: '0.5rem' }}
                   >
                     {settlementAccounts.length === 0 ? <option value="">No payment accounts available</option> : settlementAccounts.map((account) => (
                       <option key={account.account_id ?? account.id ?? account.name} value={account.account_id ?? account.id ?? ''}>
@@ -311,91 +451,171 @@ export function PayrollPage() {
                   </select>
                 </label>
 
-                <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <div className="table-wrapper" style={{ marginTop: 'var(--space-md)' }}>
+                  <table className="data-table">
                     <thead>
                       <tr>
-                        <th style={{ textAlign: 'left', padding: '0.5rem' }}>Period</th>
-                        <th style={{ textAlign: 'left', padding: '0.5rem' }}>Status</th>
-                        <th style={{ textAlign: 'left', padding: '0.5rem' }}>Actions</th>
+                        <th>Period</th>
+                        <th>Status</th>
+                        <th>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
                       <tr>
-                        <td style={{ padding: '0.5rem' }}>{createdRun.period ?? '—'}</td>
-                        <td style={{ padding: '0.5rem' }}>{createdRun.status ?? '—'}</td>
-                        <td style={{ padding: '0.5rem' }}>
-                          <button type="button" className="button button--secondary" onClick={() => setSelectedRunId(createdRun.run_id ?? createdRun.id ?? null)}>View payslips</button>{' '}
-                          <button type="button" className="button button--secondary" onClick={() => void approveRun(createdRun.run_id ?? createdRun.id ?? '')}>Approve</button>{' '}
-                          <button type="button" className="button button--secondary" onClick={() => void rejectRun(createdRun.run_id ?? createdRun.id ?? '')}>Reject</button>{' '}
-                          <button type="button" className="button button--secondary" onClick={() => void payRun(createdRun.run_id ?? createdRun.id ?? '')} disabled={!selectedSettlementAccountId}>Pay</button>
+                        <td><strong style={{ display: 'block' }}>{createdRun.period ?? '—'}</strong></td>
+                        <td className="data-table__cell--status">
+                          <StatusBadge
+                            label={deriveStatusBadgeFromState(createdRun.status ?? 'Draft').label}
+                            tone={deriveStatusBadgeFromState(createdRun.status ?? 'Draft').tone}
+                          />
                         </td>
+                        <td>{runActionButtons(createdRun)}</td>
                       </tr>
                     </tbody>
                   </table>
                 </div>
-              </div>
+              </>
             )}
           </div>
         </div>
 
-        <div className="exec-dash__panel" style={{ margin: '0 21px 21px' }}>
+        <div className="exec-dash__panel--standalone">
           <div className="exec-dash__panel-title">Payslips for created run</div>
           {!selectedRunId ? (
-            <div className="exec-dash__state-card exec-dash__state-card--empty"><h2 className="exec-dash__state-title">No run selected</h2><p className="exec-dash__state-message">Create a run to inspect its inline payslips.</p></div>
+            <div className="exec-dash__state-card exec-dash__state-card--empty"><h2 className="exec-dash__state-title">No run selected</h2><p className="exec-dash__state-message">Create a run and click “View payslips” to inspect its inline payslips.</p></div>
           ) : selectedRunPayslips.length === 0 ? (
-            <div className="exec-dash__state-card exec-dash__state-card--empty"><h2 className="exec-dash__state-title">No payslips returned</h2><p className="exec-dash__state-message">The create response did not include payslip rows, so no inline payslip table can be displayed yet.</p></div>
+            <div className="exec-dash__state-card exec-dash__state-card--empty"><h2 className="exec-dash__state-title">No payslips returned</h2><p className="exec-dash__state-message">The create response did not include payslip rows.</p></div>
           ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr>
-                    <th style={{ textAlign: 'left', padding: '0.5rem' }}>Employee</th>
-                    <th style={{ textAlign: 'right', padding: '0.5rem' }}>Gross salary</th>
-                    <th style={{ textAlign: 'right', padding: '0.5rem' }}>PAYE</th>
-                    <th style={{ textAlign: 'right', padding: '0.5rem' }}>SSNIT employee</th>
-                    <th style={{ textAlign: 'right', padding: '0.5rem' }}>SSNIT employer</th>
-                    <th style={{ textAlign: 'right', padding: '0.5rem' }}>Other deductions</th>
-                    <th style={{ textAlign: 'right', padding: '0.5rem' }}>Net salary</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {selectedRunPayslips.map((payslip) => (
-                    <tr key={payslip.payslip_id ?? payslip.id ?? payslip.employee_id}>
-                      <td style={{ padding: '0.5rem' }}>{employeeNameById[payslip.employee_id ?? ''] ?? payslip.employee_id ?? '—'}</td>
-                      <td style={{ textAlign: 'right', padding: '0.5rem' }}>{formatMoneyGhs(Number(payslip.gross_salary ?? 0) || 0)}</td>
-                      <td style={{ textAlign: 'right', padding: '0.5rem' }}>{formatMoneyGhs(Number(payslip.paye ?? 0) || 0)}</td>
-                      <td style={{ textAlign: 'right', padding: '0.5rem' }}>{formatMoneyGhs(Number(payslip.ssnit_employee ?? 0) || 0)}</td>
-                      <td style={{ textAlign: 'right', padding: '0.5rem' }}>{formatMoneyGhs(Number(payslip.ssnit_employer ?? 0) || 0)}</td>
-                      <td style={{ textAlign: 'right', padding: '0.5rem' }}>{formatMoneyGhs(Number(payslip.other_deductions ?? 0) || 0)}</td>
-                      <td style={{ textAlign: 'right', padding: '0.5rem' }}>{formatMoneyGhs(Number(payslip.net_salary ?? 0) || 0)}</td>
+            <>
+              <div className="table-wrapper">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Employee</th>
+                      <th className="data-table__num">Gross salary</th>
+                      <th className="data-table__num">PAYE</th>
+                      <th className="data-table__num">SSNIT employee</th>
+                      <th className="data-table__num">SSNIT employer</th>
+                      <th className="data-table__num">Other deductions</th>
+                      <th className="data-table__num">Net salary</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {selectedRunPayslips.map((payslip) => (
+                      <tr key={payslip.payslip_id ?? payslip.id ?? payslip.employee_id}>
+                        <td>{employeeNameById[payslip.employee_id ?? ''] ?? payslip.employee_id ?? '—'}</td>
+                        <td className="data-table__num">{formatMoneyGhs(Number(payslip.gross_salary ?? 0) || 0)}</td>
+                        <td className="data-table__num">{formatMoneyGhs(Number(payslip.paye ?? 0) || 0)}</td>
+                        <td className="data-table__num">{formatMoneyGhs(Number(payslip.ssnit_employee ?? 0) || 0)}</td>
+                        <td className="data-table__num">{formatMoneyGhs(Number(payslip.ssnit_employer ?? 0) || 0)}</td>
+                        <td className="data-table__num">{formatMoneyGhs(Number(payslip.other_deductions ?? 0) || 0)}</td>
+                        <td className="data-table__num"><strong>{formatMoneyGhs(Number(payslip.net_salary ?? 0) || 0)}</strong></td>
+                      </tr>
+                    ))}
+                    {runTotals && (
+                      <tr style={{ fontWeight: 600, background: 'var(--color-bg-muted)' }}>
+                        <td>Totals ({selectedRunPayslips.length} payslips)</td>
+                        <td className="data-table__num">{formatMoneyGhs(runTotals.gross)}</td>
+                        <td className="data-table__num">{formatMoneyGhs(runTotals.paye)}</td>
+                        <td className="data-table__num">{formatMoneyGhs(runTotals.ssnitEmp)}</td>
+                        <td className="data-table__num">{formatMoneyGhs(runTotals.ssnitEmpLr)}</td>
+                        <td className="data-table__num">{formatMoneyGhs(runTotals.other)}</td>
+                        <td className="data-table__num">{formatMoneyGhs(runTotals.net)}</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </div>
       </section>
 
       {showModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(10, 14, 26, 0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', zIndex: 1000 }}>
-          <div style={{ width: '100%', maxWidth: 460, background: 'var(--surface)', borderRadius: 16, padding: '1rem', boxShadow: '0 20px 45px rgba(0,0,0,0.35)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-              <h2 style={{ margin: 0 }}>Create payroll run</h2>
-              <button type="button" className="button button--secondary" onClick={() => setShowModal(false)}>Close</button>
+        <div
+          className="modal-overlay"
+          onClick={(event) => {
+            if (event.target !== event.currentTarget) return
+            setShowModal(false)
+          }}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="payroll-modal-title"
+        >
+          <div className="modal">
+            <div className="modal__header">
+              <div className="modal__header-text">
+                <h2 id="payroll-modal-title" className="modal__title">Create payroll run</h2>
+                <p className="modal__subtitle">Generate payslips for all eligible active employees for the selected period.</p>
+              </div>
+              <button type="button" aria-label="Close dialog" className="modal__close" onClick={() => setShowModal(false)}>×</button>
             </div>
-            <label>
-              Period
-              <input type="month" value={runPeriod} onChange={(event) => setRunPeriod(event.target.value)} style={{ display: 'block', width: '100%', marginTop: '0.25rem', marginBottom: '0.75rem' }} />
-            </label>
-            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+            <div className="modal__body">
+              {formError && <div className="exec-dash__state-card exec-dash__state-card--error exec-dash__state-card--inline"><h2 className="exec-dash__state-title">Error</h2><p className="exec-dash__state-message">{formError}</p></div>}
+              <div className="form-grid">
+                <label className="form-field form-field--full">
+                  <span className="form-field__label">Period (YYYY-MM)</span>
+                  <input type="month" value={runPeriod} onChange={(event) => setRunPeriod(event.target.value)} required />
+                </label>
+              </div>
+              {blockingEmployees.length > 0 && (
+                <div className="exec-dash__state-card exec-dash__state-card--warning exec-dash__state-card--inline">
+                  <h2 className="exec-dash__state-title">Run will fail — {blockingEmployees.length} employee(s) unclassified</h2>
+                  <p className="exec-dash__state-message">Assign `staff_category` (Project / Admin) to each active employee in Employee Records before creating a run.</p>
+                </div>
+              )}
+            </div>
+            <div className="modal__footer">
               <button type="button" className="button button--secondary" onClick={() => setShowModal(false)}>Cancel</button>
-              <button type="button" className="button button--primary" onClick={() => { void createRun(); setShowModal(false) }} disabled={submitting}>{submitting ? 'Creating…' : 'Create run'}</button>
+              <button type="button" className="button button--primary" onClick={() => { void createRun() }} disabled={submitting || blockingEmployees.length > 0}>
+                {submitting ? 'Creating…' : 'Create run'}
+              </button>
             </div>
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!approveTarget}
+        onClose={() => setApproveTarget(null)}
+        onConfirm={() => void handleApproveConfirm()}
+        tone="warning"
+        iconGlyph="✓"
+        title="Approve this payroll run?"
+        description={`Approving payroll run${approveTarget?.period ? ` for ${approveTarget.period}` : ''} (${approveTarget?.runId ?? ''}) marks it as Approved and eligible for payment. Approved runs can still be rejected if corrections are needed before Pay.`}
+        confirmLabel="Approve run"
+        cancelLabel="Keep current status"
+        confirmingLabel="Approving…"
+      />
+
+      <ConfirmDialog
+        open={!!rejectTarget}
+        onClose={() => setRejectTarget(null)}
+        onConfirm={(reason) => void handleRejectConfirm(reason)}
+        tone="danger"
+        iconGlyph="✕"
+        title="Reject this payroll run?"
+        description={`Rejecting payroll run${rejectTarget?.period ? ` for ${rejectTarget.period}` : ''} (${rejectTarget?.runId ?? ''}) returns it to Draft for corrections. Payslips are NOT deleted — run must be corrected and re-submitted for approval.`}
+        requireReason
+        reasonLabel="Reason for rejection (required)"
+        reasonPlaceholder="e.g. Missing contractor, PAYE rates incorrect, SSNIT columns swapped…"
+        confirmLabel="Reject run"
+        cancelLabel="Keep current status"
+        confirmingLabel="Rejecting…"
+      />
+
+      <ConfirmDialog
+        open={!!payTarget}
+        onClose={() => setPayTarget(null)}
+        onConfirm={() => void handlePayConfirm()}
+        tone="info"
+        iconGlyph="₵"
+        title="Initiate payroll disbursement?"
+        description={`Paying payroll run${payTarget?.period ? ` for ${payTarget.period}` : ''} (${payTarget?.runId ?? ''}) marks the run as Paid. Settlement account: ${settlementAccounts.find((a) => (a.account_id ?? a.id) === selectedSettlementAccountId)?.name ?? '(none selected)'} — confirm BEFORE clicking as this triggers the final disbursement RPC.`}
+        confirmLabel="Pay run"
+        cancelLabel="Review again"
+        confirmingLabel="Dispersing…"
+      />
     </article>
   )
 }

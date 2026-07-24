@@ -4,27 +4,43 @@ import { paymentReceivedCreate } from '../../lib/rpc/accountant'
 import { supabase } from '../../lib/supabase'
 import '../../styles/executive-dashboard.css'
 
-interface CustomerPaymentFormState {
-  customer_id: string
-  invoice_id: string
-  amount: number | ''
-  payment_date: string
+/**
+ * Helper to unwrap RPC envelope and extract real errors from business-logic failures.
+ */
+function unwrapRpcResponse<T>(data: unknown): { ok: boolean; value: T | null; error: string | null } {
+  const envelope = data as { success?: boolean; data: T; error?: { code: string; message: string } | null } | null
+  if (!envelope) {
+    return { ok: false, value: null, error: 'No response from server' }
+  }
+  if (envelope.success === false) {
+    return { ok: false, value: null, error: envelope.error?.message ?? 'Unknown error' }
+  }
+  return { ok: true, value: envelope.data, error: null }
 }
 
-const emptyForm = (): CustomerPaymentFormState => {
-  const today = new Date().toISOString().split('T')[0]
-  return {
-    customer_id: '',
-    invoice_id: '',
-    amount: '',
-    payment_date: today,
-  }
+interface CustomerPaymentFormState {
+  customer_id: string
+  amount: string
+  settlement_account_id: string
+}
+
+const emptyForm = (): CustomerPaymentFormState => ({
+  customer_id: '',
+  amount: '',
+  settlement_account_id: '',
+})
+
+interface SettlementAccountRecord {
+  account_id?: string
+  id?: string
+  name?: string | null
+  payment_method_type?: string | null
 }
 
 export function CustomerPaymentsPage() {
   const [form, setForm] = useState<CustomerPaymentFormState>(emptyForm())
   const [customers, setCustomers] = useState<any[]>([])
-  const [invoices, setInvoices] = useState<any[]>([])
+  const [settlementAccounts, setSettlementAccounts] = useState<SettlementAccountRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -34,46 +50,41 @@ export function CustomerPaymentsPage() {
     void loadInitialData()
   }, [])
 
-  useEffect(() => {
-    void loadInvoicesForCustomer()
-  }, [form.customer_id])
-
   async function loadInitialData() {
     setLoading(true)
     setError(null)
 
-    // Load customers
-    const { data: customersData, error: customersError } = await supabase
-      .schema('api')
-      .rpc('get_records', { p_resource: 'customers', p_page: 1, p_limit: 100 })
+    const [customersResult, settlementAccountsResult] = await Promise.all([
+      supabase.schema('api').rpc('get_records', { p_resource: 'customers', p_page: 1, p_limit: 100 }),
+      supabase.schema('api').rpc('list_payment_method_accounts'),
+    ])
 
-    if (customersError) {
-      setError(`Failed to load customers: ${customersError.message}`)
+    if (customersResult.error) {
+      setError(`Failed to load customers: ${customersResult.error.message}`)
     } else {
-      setCustomers(Array.isArray(customersData) ? customersData : customersData?.rows || customersData?.data || [])
+      const unwrapped = unwrapRpcResponse(customersResult.data)
+      if (!unwrapped.ok) {
+        setError(`Failed to load customers: ${unwrapped.error}`)
+        setCustomers([])
+      } else {
+        setCustomers(Array.isArray(unwrapped.value) ? unwrapped.value : [])
+      }
+    }
+
+    if (settlementAccountsResult.error) {
+      setError((current) => current ? `${current}; Failed to load settlement accounts: ${settlementAccountsResult.error.message}` : `Failed to load settlement accounts: ${settlementAccountsResult.error.message}`)
+      setSettlementAccounts([])
+    } else {
+      const unwrapped = unwrapRpcResponse(settlementAccountsResult.data)
+      if (!unwrapped.ok) {
+        setError((current) => current ? `${current}; Failed to load settlement accounts: ${unwrapped.error}` : `Failed to load settlement accounts: ${unwrapped.error}`)
+        setSettlementAccounts([])
+      } else {
+        setSettlementAccounts(Array.isArray(unwrapped.value) ? unwrapped.value : [])
+      }
     }
 
     setLoading(false)
-  }
-
-  async function loadInvoicesForCustomer() {
-    if (!form.customer_id) {
-      setInvoices([])
-      return
-    }
-
-    const { data: invoicesData, error: invoicesError } = await supabase
-      .schema('api')
-      .rpc('get_records', { p_resource: 'invoices', p_page: 1, p_limit: 100 })
-
-    if (invoicesError) {
-      setError(`Failed to load invoices: ${invoicesError.message}`)
-    } else {
-      const allInvoices = Array.isArray(invoicesData) ? invoicesData : invoicesData?.rows || invoicesData?.data || []
-      // Filter for customer
-      const filtered = allInvoices.filter((inv) => (inv.customer_id || inv.customer_id) === form.customer_id)
-      setInvoices(filtered)
-    }
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -82,9 +93,14 @@ export function CustomerPaymentsPage() {
     setError(null)
     setSuccess(null)
 
-    // Validate required fields
     if (!form.customer_id) {
       setError('Customer is required')
+      setSubmitting(false)
+      return
+    }
+
+    if (!form.settlement_account_id) {
+      setError('Settlement account is required')
       setSubmitting(false)
       return
     }
@@ -97,20 +113,15 @@ export function CustomerPaymentsPage() {
 
     const payload: Record<string, unknown> = {
       customer_id: form.customer_id,
+      settlement_account_id: form.settlement_account_id,
       amount: Number(form.amount),
-      payment_date: form.payment_date,
-    }
-
-    // invoice_id is optional - if provided, posts against invoice; if omitted, posts as advance
-    if (form.invoice_id) {
-      payload.invoice_id = form.invoice_id
     }
 
     const result = await paymentReceivedCreate(payload)
     if (result.ok) {
       setSuccess({
         payment_id: result.data.payment_id,
-        amount: result.data.amount,
+        amount: result.data.amount ?? 0,
       })
       setForm(emptyForm())
     } else {
@@ -131,7 +142,7 @@ export function CustomerPaymentsPage() {
         </header>
         <div className="exec-dash__state-card">
           <h2 className="exec-dash__state-title">Loading</h2>
-          <p className="exec-dash__state-message">Fetching customers...</p>
+          <p className="exec-dash__state-message">Fetching customers and payment options...</p>
         </div>
       </article>
     )
@@ -151,19 +162,19 @@ export function CustomerPaymentsPage() {
         <div className="users-card__header">
           <div>
             <h2>Payment Details</h2>
-            <p>Invoice is optional. Omitting it posts the payment as a customer advance.</p>
+            <p>Payment posts to Client Advances. Link to a specific invoice — coming soon.</p>
           </div>
         </div>
 
         <div className="exec-dash__row">
           <div className="exec-dash__panel">
-            {error && <div className="exec-dash__state-card exec-dash__state-card--error" style={{ marginBottom: '1rem' }}>
+            {error && <div className="exec-dash__state-card exec-dash__state-card--error exec-dash__state-card--inline">
               <h2 className="exec-dash__state-title">Error</h2>
               <p className="exec-dash__state-message">{error}</p>
             </div>}
 
-            {success && <div className="exec-dash__state-card" style={{ marginBottom: '1rem', borderLeft: '4px solid #22c55e' }}>
-              <h2 className="exec-dash__state-title">Payment Recorded</h2>
+            {success && <div className="exec-dash__state-card exec-dash__state-card--success exec-dash__state-card--inline">
+              <h2 className="exec-dash__state-title">Payment recorded</h2>
               <p className="exec-dash__state-message">
                 Payment ID: <strong>{success.payment_id}</strong>
                 <br />
@@ -172,81 +183,70 @@ export function CustomerPaymentsPage() {
             </div>}
 
             <form onSubmit={(event) => void handleSubmit(event)}>
-              <label style={{ marginBottom: '1rem', display: 'block' }}>
-                Customer *
-                <select
-                  value={form.customer_id}
-                  onChange={(event) => setForm((current) => ({ ...current, customer_id: event.target.value, invoice_id: '' }))}
-                  required
-                  style={{ display: 'block', width: '100%', marginTop: '0.25rem', padding: '0.5rem' }}
-                >
-                  <option value="">Select a customer</option>
-                  {customers.map((customer) => (
-                    <option key={customer.customer_id || customer.id} value={customer.customer_id || customer.id}>
-                      {customer.name || customer.customer_name || '—'}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              {form.customer_id && (
-                <label style={{ marginBottom: '1rem', display: 'block' }}>
-                  Invoice (optional — leave blank to post as advance)
+              <div className="form-grid">
+                <label className="form-field">
+                  <span className="form-field__label">Customer *</span>
                   <select
-                    value={form.invoice_id}
-                    onChange={(event) => setForm((current) => ({ ...current, invoice_id: event.target.value }))}
-                    style={{ display: 'block', width: '100%', marginTop: '0.25rem', padding: '0.5rem' }}
+                    value={form.customer_id}
+                    onChange={(event) => setForm((current) => ({ ...current, customer_id: event.target.value }))}
+                    required
                   >
-                    <option value="">No invoice (post as advance)</option>
-                    {invoices.map((invoice) => (
-                      <option key={invoice.invoice_id || invoice.id} value={invoice.invoice_id || invoice.id}>
-                        {invoice.invoice_number} – {formatMoneyGhs(Number(invoice.amount_due || 0) || 0)}
+                    <option value="">Select a customer</option>
+                    {customers.map((customer) => (
+                      <option key={customer.customer_id || customer.id} value={customer.customer_id || customer.id}>
+                        {customer.name || customer.customer_name || '—'}
                       </option>
                     ))}
                   </select>
                 </label>
-              )}
 
-              <label style={{ marginBottom: '1rem', display: 'block' }}>
-                Amount *
-                <input
-                  type="number"
-                  placeholder="0.00"
-                  value={form.amount}
-                  onChange={(event) => setForm((current) => ({ ...current, amount: event.target.value }))}
-                  step="0.01"
-                  min="0"
-                  required
-                  style={{ display: 'block', width: '100%', marginTop: '0.25rem', padding: '0.5rem' }}
-                />
-              </label>
+                <label className="form-field">
+                  <span className="form-field__label">Amount *</span>
+                  <input
+                    type="number"
+                    placeholder="0.00"
+                    value={form.amount}
+                    onChange={(event) => setForm((current) => ({ ...current, amount: event.target.value }))}
+                    step="0.01"
+                    min="0"
+                    required
+                  />
+                </label>
 
-              <label style={{ marginBottom: '1.5rem', display: 'block' }}>
-                Payment Date *
-                <input
-                  type="date"
-                  value={form.payment_date}
-                  onChange={(event) => setForm((current) => ({ ...current, payment_date: event.target.value }))}
-                  required
-                  style={{ display: 'block', width: '100%', marginTop: '0.25rem', padding: '0.5rem' }}
-                />
-              </label>
+                <label className="form-field form-field--full">
+                  <span className="form-field__label">Settlement account *</span>
+                  <select
+                    value={form.settlement_account_id}
+                    onChange={(event) => setForm((current) => ({ ...current, settlement_account_id: event.target.value }))}
+                    required
+                  >
+                    <option value="">Select settlement account</option>
+                    {settlementAccounts.map((account) => (
+                      <option key={account.account_id || account.id} value={account.account_id || account.id}>
+                        {account.name || 'Unnamed account'} ({account.payment_method_type || 'Unknown'})
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
 
-              <div style={{ padding: '1rem', backgroundColor: '#f5f5f5', marginBottom: '1rem', borderRadius: '4px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <div className="summary-box">
+                <div className="summary-box__row summary-box__row--total">
                   <strong>Amount to receive:</strong>
                   <span>{formatMoneyGhs(Number(form.amount) || 0)}</span>
                 </div>
+                <div className="summary-box__note">Posted today.</div>
               </div>
 
-              <button
-                type="submit"
-                className="button button--primary"
-                disabled={submitting}
-                style={{ width: '100%' }}
-              >
-                {submitting ? 'Recording Payment...' : 'Record Payment'}
-              </button>
+              <div className="form-actions">
+                <button
+                  type="submit"
+                  className="button button--primary"
+                  disabled={submitting}
+                >
+                  {submitting ? 'Recording Payment...' : 'Record Payment'}
+                </button>
+              </div>
             </form>
           </div>
         </div>

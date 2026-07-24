@@ -329,6 +329,8 @@ create table public.paye_tax_bands (
   effective_from date not null default current_date
 );
 
+-- Top-band threshold has a disclosed ambiguity in Act 1111 (50,416.67 vs 50,000/month cumulative vs printed figure) -- see TaxLawGH Ghana Tax Rates, PAYE drafting alert, reviewed 21 July 2026. Seeded value uses the cumulative-consistent figure.
+
 -- ============ ADDENDUM 2 TABLES (confirmed live) ============
 
 create table public.coa_code_ranges (

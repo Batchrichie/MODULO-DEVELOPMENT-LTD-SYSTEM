@@ -1,5 +1,18 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import type { UserRole } from '../types/auth'
+import {
+  BarChart3,
+  Layers,
+  FileBarChart,
+  Users,
+  Shield,
+  Wallet,
+  Menu,
+  type LucideIcon,
+} from 'lucide-react'
+
+const ICON_SIZE = 14
+const ICON_STROKE = 1.6
 
 interface BottomNavProps {
   role: UserRole
@@ -22,63 +35,64 @@ interface BottomNavConfig {
 const bottomNavByRole: Record<UserRole, BottomNavConfig> = {
   Admin: {
     items: [
-      { label: 'Dashboard', path: '/admin/dashboard', icon: 'chart' },
-      { label: 'Properties', path: '/admin/rental-properties', icon: 'building' },
-      { label: 'Analytics', path: '/admin/reports', icon: 'report' },
+      { label: 'User Management', path: '/admin/user-management', icon: 'Users' },
+      { label: 'Roles & Permissions', path: '/admin/roles-permissions', icon: 'Shield' },
+      { label: 'Audit Log', path: '/admin/audit-log', icon: 'FileBarChart' },
     ],
-    fabLabel: 'Add Property',
-    fabPath: '/admin/rental-properties',
+    fabLabel: 'Security',
+    fabPath: '/admin/security-monitoring',
   },
   CEO: {
     items: [
-      { label: 'Dashboard', path: '/executive/dashboard', icon: 'chart' },
-      { label: 'Portfolio', path: '/executive/project-portfolio', icon: 'layers' },
-      { label: 'Reports', path: '/executive/reports', icon: 'report' },
+      { label: 'Dashboard', path: '/executive/dashboard', icon: 'BarChart3' },
+      { label: 'Portfolio', path: '/executive/project-portfolio', icon: 'Layers' },
+      { label: 'Reports', path: '/executive/reports', icon: 'FileBarChart' },
     ],
     fabLabel: 'New Project',
     fabPath: '/executive/project-portfolio',
   },
   Accountant: {
     items: [
-      { label: 'Dashboard', path: '/accountant/dashboard', icon: 'chart' },
-      { label: 'Accounts', path: '/accountant/chart-of-accounts', icon: 'wallet' },
-      { label: 'Reports', path: '/accountant/reports/financial-reports', icon: 'report' },
+      { label: 'Dashboard', path: '/accountant/dashboard', icon: 'BarChart3' },
+      { label: 'Accounts', path: '/accountant/chart-of-accounts', icon: 'Wallet' },
+      { label: 'Reports', path: '/accountant/reports/financial-reports', icon: 'FileBarChart' },
     ],
     fabLabel: 'New Journal',
     fabPath: '/accountant/journal-entries',
   },
   ProjectManager: {
     items: [
-      { label: 'Dashboard', path: '/project-manager/my-projects', icon: 'chart' },
-      { label: 'Projects', path: '/project-manager/my-projects', icon: 'layers' },
-      { label: 'Team', path: '/project-manager/documents', icon: 'users' },
+      { label: 'Dashboard', path: '/project-manager/my-projects', icon: 'BarChart3' },
+      { label: 'Projects', path: '/project-manager/my-projects', icon: 'Layers' },
+      { label: 'Team', path: '/project-manager/documents', icon: 'Users' },
     ],
     fabLabel: 'New Project',
     fabPath: '/project-manager/my-projects',
   },
   Employee: {
     items: [
-      { label: 'Dashboard', path: '/employee/my-profile', icon: 'chart' },
-      { label: 'Projects', path: '/employee/assigned-projects', icon: 'layers' },
-      { label: 'Payslips', path: '/employee/payslips', icon: 'wallet' },
+      { label: 'Dashboard', path: '/employee/my-profile', icon: 'BarChart3' },
+      { label: 'Projects', path: '/employee/assigned-projects', icon: 'Layers' },
+      { label: 'Payslips', path: '/employee/payslips', icon: 'Wallet' },
     ],
     fabLabel: 'Request Leave',
     fabPath: '/employee/leave',
   },
 }
 
-const iconPaths: Record<string, string> = {
-  chart: 'M4 19V5m0 14h16M8 16v-4m4 4V8m4 8V5',
-  building: 'M4 20V5l8-2 8 2v15M8 8h1m-1 4h1m6-4h1m-1 4h1M9 20v-4h6v4',
-  layers: 'm12 3 9 5-9 5-9-5 9-5Zm-9 9 9 5 9-5M3 16l9 5 9-5',
-  report: 'M6 3h9l3 3v15H6V3Zm3 5h5m-5 4h5m-5 4h3',
-  users: 'M16 20v-1.5a3.5 3.5 0 0 0-3.5-3.5h-5A3.5 3.5 0 0 0 4 18.5V20m6-9a3 3 0 1 0 0-6 3 3 0 0 0 0 6',
-  wallet: 'M4 7h16v13H4V7Zm0 0 2-4h12l2 4m-4 6h4',
-  menu: 'M4 6h16M4 12h16M4 18h16',
+const iconMap: Record<string, LucideIcon> = {
+  BarChart3,
+  Layers,
+  FileBarChart,
+  Users,
+  Shield,
+  Wallet,
+  Menu,
 }
 
 function Icon({ name }: { name: string }) {
-  return <svg viewBox="0 0 24 24" aria-hidden="true"><path d={iconPaths[name] ?? iconPaths.chart} /></svg>
+  const LucideIconComponent = iconMap[name] ?? BarChart3
+  return <LucideIconComponent size={ICON_SIZE} strokeWidth={ICON_STROKE} />
 }
 
 export function BottomNav({ role, menuOpen, onMenuToggle }: BottomNavProps) {

@@ -1,3 +1,5 @@
+import { companyProfile } from '../config/companyProfile'
+
 interface PlaceholderPageProps {
   title: string
   breadcrumb?: string
@@ -41,7 +43,7 @@ function UserManagementPage() {
         {stats.map((stat) => <div className="stat-card" key={stat.label}><div className={`stat-card__icon stat-card__icon--${stat.tone}`}><svg viewBox="0 0 24 24"><path d={statPath(stat.icon)} /></svg></div><div className="stat-card__content"><span>{stat.label}</span><strong>{stat.value}</strong><small className={stat.change.startsWith('-') ? 'stat-card__change--negative' : ''}>{stat.change} <em>vs. last month</em></small></div></div>)}
       </section>
       <section className="users-card">
-        <div className="users-card__header"><div><h2>All Users</h2><p>View and manage everyone with access to BuildCore.</p></div><div className="users-card__actions"><button type="button" className="button button--secondary"><svg viewBox="0 0 24 24"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 19h14" /></svg>Export</button><button type="button" className="button button--primary">+ Add User</button></div></div>
+        <div className="users-card__header"><div><h2>All Users</h2><p>View and manage everyone with access to {companyProfile.name}.</p></div><div className="users-card__actions"><button type="button" className="button button--secondary"><svg viewBox="0 0 24 24"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 19h14" /></svg>Export</button><button type="button" className="button button--primary">+ Add User</button></div></div>
         <div className="users-card__empty"><div className="empty-illustration"><span /><span /><span /><i /></div><h2>Coming in REBUILD-3+</h2><p>User management workflows are being prepared. This workspace will soon show your team, roles, and access activity.</p><span className="status-pill">Not yet built</span></div>
       </section>
     </article>

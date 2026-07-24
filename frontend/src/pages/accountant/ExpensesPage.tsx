@@ -1,29 +1,47 @@
 import { useEffect, useState } from 'react'
 import { formatMoneyGhs } from '../../lib/formatMoney'
-import { expenseCreate } from '../../lib/rpc/accountant'
+import { expenseCreate, fetchAccounts } from '../../lib/rpc/accountant'
 import { supabase } from '../../lib/supabase'
 import '../../styles/executive-dashboard.css'
 
+/**
+ * Helper to unwrap RPC envelope and extract real errors from business-logic failures.
+ */
+function unwrapRpcResponse<T>(data: unknown): { ok: boolean; value: T | null; error: string | null } {
+  const envelope = data as { success?: boolean; data: T; error?: { code: string; message: string } | null } | null
+  if (!envelope) {
+    return { ok: false, value: null, error: 'No response from server' }
+  }
+  if (envelope.success === false) {
+    return { ok: false, value: null, error: envelope.error?.message ?? 'Unknown error' }
+  }
+  return { ok: true, value: envelope.data, error: null }
+}
+
 interface ExpenseFormState {
-  description: string
-  amount: number | ''
+  supplier_id: string
+  amount: string
   project_id: string
+  coa_account: string
   expense_date: string
 }
 
 const emptyForm = (): ExpenseFormState => {
   const today = new Date().toISOString().split('T')[0]
   return {
-    description: '',
+    supplier_id: '',
     amount: '',
     project_id: '',
+    coa_account: '',
     expense_date: today,
   }
 }
 
 export function ExpensesPage() {
   const [form, setForm] = useState<ExpenseFormState>(emptyForm())
+  const [suppliers, setSuppliers] = useState<any[]>([])
   const [projects, setProjects] = useState<any[]>([])
+  const [accounts, setAccounts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -37,15 +55,50 @@ export function ExpensesPage() {
     setLoading(true)
     setError(null)
 
+    // Load suppliers
+    const { data: suppliersData, error: suppliersError } = await supabase
+      .schema('api')
+      .rpc('get_records', { p_resource: 'suppliers', p_page: 1, p_limit: 100 })
+
+    if (suppliersError) {
+      setError(`Failed to load suppliers: ${suppliersError.message}`)
+    } else {
+      const unwrapped = unwrapRpcResponse(suppliersData)
+      if (!unwrapped.ok) {
+        setError(`Failed to load suppliers: ${unwrapped.error}`)
+        setSuppliers([])
+      } else {
+        setSuppliers(Array.isArray(unwrapped.value) ? unwrapped.value : [])
+      }
+    }
+
     // Load projects
     const { data: projectsData, error: projectsError } = await supabase
       .schema('api')
       .rpc('get_records', { p_resource: 'projects', p_page: 1, p_limit: 100 })
 
     if (projectsError) {
-      setError(`Failed to load projects: ${projectsError.message}`)
+      console.warn(`Failed to load projects: ${projectsError.message}`)
     } else {
-      setProjects(Array.isArray(projectsData) ? projectsData : projectsData?.rows || projectsData?.data || [])
+      const unwrapped = unwrapRpcResponse(projectsData)
+      if (!unwrapped.ok) {
+        console.warn(`Failed to load projects: ${unwrapped.error}`)
+      } else {
+        setProjects(Array.isArray(unwrapped.value) ? unwrapped.value : [])
+      }
+    }
+
+    // Load and filter accounts (Expense or Asset, postable only)
+    const accountsResult = await fetchAccounts()
+    if (accountsResult.ok) {
+      const filtered = accountsResult.data.filter(
+        (acc: any) =>
+          (acc.type === 'Expense' || acc.type === 'Asset') &&
+          acc.is_postable === true
+      )
+      setAccounts(filtered)
+    } else {
+      console.warn(`Failed to load accounts: ${accountsResult.error}`)
     }
 
     setLoading(false)
@@ -58,8 +111,8 @@ export function ExpensesPage() {
     setSuccess(null)
 
     // Validate required fields
-    if (!form.description) {
-      setError('Description is required')
+    if (!form.supplier_id) {
+      setError('Supplier is required')
       setSubmitting(false)
       return
     }
@@ -70,9 +123,16 @@ export function ExpensesPage() {
       return
     }
 
+    if (!form.coa_account) {
+      setError('GL Account is required')
+      setSubmitting(false)
+      return
+    }
+
     const payload: Record<string, unknown> = {
-      description: form.description,
+      supplier_id: form.supplier_id,
       amount: Number(form.amount),
+      coa_account: form.coa_account,
       expense_date: form.expense_date,
     }
 
@@ -85,7 +145,7 @@ export function ExpensesPage() {
     if (result.ok) {
       setSuccess({
         expense_id: result.data.expense_id,
-        amount: result.data.amount,
+        amount: result.data.amount ?? 0,
         budget_flag: result.data.budget_flag,
       })
       setForm(emptyForm())
@@ -107,7 +167,7 @@ export function ExpensesPage() {
         </header>
         <div className="exec-dash__state-card">
           <h2 className="exec-dash__state-title">Loading</h2>
-          <p className="exec-dash__state-message">Fetching projects...</p>
+          <p className="exec-dash__state-message">Fetching suppliers, projects, and accounts...</p>
         </div>
       </article>
     )
@@ -133,7 +193,7 @@ export function ExpensesPage() {
 
         <div className="exec-dash__row">
           <div className="exec-dash__panel">
-            {error && <div className="exec-dash__state-card exec-dash__state-card--error" style={{ marginBottom: '1rem' }}>
+            {error && <div className="exec-dash__state-card exec-dash__state-card--error exec-dash__state-card--inline">
               <h2 className="exec-dash__state-title">Error</h2>
               <p className="exec-dash__state-message">{error}</p>
             </div>}
@@ -141,19 +201,12 @@ export function ExpensesPage() {
             {success && (
               <>
                 {success.budget_flag && (
-                  <div style={{
-                    marginBottom: '1rem',
-                    padding: '1rem',
-                    backgroundColor: '#fef3c7',
-                    border: '1px solid #fcd34d',
-                    borderRadius: '4px',
-                    color: '#92400e'
-                  }}>
+                  <div className="exec-dash__state-card exec-dash__state-card--warning exec-dash__state-card--inline">
                     <strong>⚠️ Budget Warning</strong>
                     <p>This expense exceeds the project budget. Review budget status before proceeding.</p>
                   </div>
                 )}
-                <div className="exec-dash__state-card" style={{ marginBottom: '1rem', borderLeft: '4px solid #22c55e' }}>
+                <div className="exec-dash__state-card exec-dash__state-card--success exec-dash__state-card--inline">
                   <h2 className="exec-dash__state-title">Expense Created</h2>
                   <p className="exec-dash__state-message">
                     Expense ID: <strong>{success.expense_id}</strong>
@@ -165,74 +218,94 @@ export function ExpensesPage() {
             )}
 
             <form onSubmit={(event) => void handleSubmit(event)}>
-              <label style={{ marginBottom: '1rem', display: 'block' }}>
-                Description *
-                <input
-                  type="text"
-                  placeholder="e.g., Building materials, fuel, contractor payment"
-                  value={form.description}
-                  onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
-                  required
-                  style={{ display: 'block', width: '100%', marginTop: '0.25rem', padding: '0.5rem' }}
-                />
-              </label>
+              <div className="form-grid">
+                <label className="form-field">
+                  <span className="form-field__label">Supplier *</span>
+                  <select
+                    value={form.supplier_id}
+                    onChange={(event) => setForm((current) => ({ ...current, supplier_id: event.target.value }))}
+                    required
+                  >
+                    <option value="">Select a supplier</option>
+                    {suppliers.map((supplier) => (
+                      <option key={supplier.supplier_id || supplier.id} value={supplier.supplier_id || supplier.id}>
+                        {supplier.name || supplier.supplier_name || '—'}
+                      </option>
+                    ))}
+                  </select>
+                </label>
 
-              <label style={{ marginBottom: '1rem', display: 'block' }}>
-                Amount *
-                <input
-                  type="number"
-                  placeholder="0.00"
-                  value={form.amount}
-                  onChange={(event) => setForm((current) => ({ ...current, amount: event.target.value }))}
-                  step="0.01"
-                  min="0"
-                  required
-                  style={{ display: 'block', width: '100%', marginTop: '0.25rem', padding: '0.5rem' }}
-                />
-              </label>
+                <label className="form-field">
+                  <span className="form-field__label">Amount *</span>
+                  <input
+                    type="number"
+                    placeholder="0.00"
+                    value={form.amount}
+                    onChange={(event) => setForm((current) => ({ ...current, amount: event.target.value }))}
+                    step="0.01"
+                    min="0"
+                    required
+                  />
+                </label>
 
-              <label style={{ marginBottom: '1rem', display: 'block' }}>
-                Project (optional — leave blank for overhead)
-                <select
-                  value={form.project_id}
-                  onChange={(event) => setForm((current) => ({ ...current, project_id: event.target.value }))}
-                  style={{ display: 'block', width: '100%', marginTop: '0.25rem', padding: '0.5rem' }}
-                >
-                  <option value="">Overhead (no project)</option>
-                  {projects.map((project) => (
-                    <option key={project.project_id || project.id} value={project.project_id || project.id}>
-                      {project.name || project.project_name || '—'}
-                    </option>
-                  ))}
-                </select>
-              </label>
+                <label className="form-field">
+                  <span className="form-field__label">GL Account (Expense/Asset) *</span>
+                  <select
+                    value={form.coa_account}
+                    onChange={(event) => setForm((current) => ({ ...current, coa_account: event.target.value }))}
+                    required
+                  >
+                    <option value="">Select an account</option>
+                    {accounts.map((account) => (
+                      <option key={account.account_id || account.id} value={account.account_id || account.id}>
+                        {account.code} — {account.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
 
-              <label style={{ marginBottom: '1.5rem', display: 'block' }}>
-                Expense Date *
-                <input
-                  type="date"
-                  value={form.expense_date}
-                  onChange={(event) => setForm((current) => ({ ...current, expense_date: event.target.value }))}
-                  required
-                  style={{ display: 'block', width: '100%', marginTop: '0.25rem', padding: '0.5rem' }}
-                />
-              </label>
+                <label className="form-field">
+                  <span className="form-field__label">Expense Date *</span>
+                  <input
+                    type="date"
+                    value={form.expense_date}
+                    onChange={(event) => setForm((current) => ({ ...current, expense_date: event.target.value }))}
+                    required
+                  />
+                </label>
 
-              <div style={{ padding: '1rem', backgroundColor: '#f5f5f5', marginBottom: '1rem', borderRadius: '4px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <label className="form-field form-field--full">
+                  <span className="form-field__label">Project (optional — leave blank for overhead)</span>
+                  <select
+                    value={form.project_id}
+                    onChange={(event) => setForm((current) => ({ ...current, project_id: event.target.value }))}
+                  >
+                    <option value="">Overhead (no project)</option>
+                    {projects.map((project) => (
+                      <option key={project.project_id || project.id} value={project.project_id || project.id}>
+                        {project.name || project.project_name || '—'}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+
+              <div className="summary-box">
+                <div className="summary-box__row summary-box__row--total">
                   <strong>Total expense:</strong>
                   <span>{formatMoneyGhs(Number(form.amount) || 0)}</span>
                 </div>
               </div>
 
-              <button
-                type="submit"
-                className="button button--primary"
-                disabled={submitting}
-                style={{ width: '100%' }}
-              >
-                {submitting ? 'Creating Expense...' : 'Create Expense'}
-              </button>
+              <div className="form-actions">
+                <button
+                  type="submit"
+                  className="button button--primary"
+                  disabled={submitting}
+                >
+                  {submitting ? 'Creating Expense...' : 'Create Expense'}
+                </button>
+              </div>
             </form>
           </div>
         </div>

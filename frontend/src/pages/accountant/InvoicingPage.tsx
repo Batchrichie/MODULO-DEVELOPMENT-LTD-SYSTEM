@@ -4,6 +4,20 @@ import { invoiceCreate, fetchTaxRates, normalizeTaxRates, type TaxRates } from '
 import { supabase } from '../../lib/supabase'
 import '../../styles/executive-dashboard.css'
 
+/**
+ * Helper to unwrap RPC envelope and extract real errors from business-logic failures.
+ */
+function unwrapRpcResponse<T>(data: unknown): { ok: boolean; value: T | null; error: string | null } {
+  const envelope = data as { success?: boolean; data: T; error?: { code: string; message: string } | null } | null
+  if (!envelope) {
+    return { ok: false, value: null, error: 'No response from server' }
+  }
+  if (envelope.success === false) {
+    return { ok: false, value: null, error: envelope.error?.message ?? 'Unknown error' }
+  }
+  return { ok: true, value: envelope.data, error: null }
+}
+
 interface LineItem {
   description: string
   amount: number | ''
@@ -62,19 +76,25 @@ export function InvoicingPage() {
     if ('error' in customersResult && customersResult.error) {
       setError(`Failed to load customers: ${customersResult.error.message}`)
     } else {
-      const customersData = Array.isArray(customersResult.data)
-        ? customersResult.data
-        : customersResult.data?.rows || customersResult.data?.data || []
-      setCustomers(customersData)
+      const unwrapped = unwrapRpcResponse(customersResult.data)
+      if (!unwrapped.ok) {
+        setError(`Failed to load customers: ${unwrapped.error}`)
+        setCustomers([])
+      } else {
+        setCustomers(Array.isArray(unwrapped.value) ? unwrapped.value : [])
+      }
     }
 
     if ('error' in projectsResult && projectsResult.error) {
       setError((current) => current ? `${current}; Failed to load projects: ${projectsResult.error.message}` : `Failed to load projects: ${projectsResult.error.message}`)
     } else {
-      const projectsData = Array.isArray(projectsResult.data)
-        ? projectsResult.data
-        : projectsResult.data?.rows || projectsResult.data?.data || []
-      setProjects(projectsData)
+      const unwrapped = unwrapRpcResponse(projectsResult.data)
+      if (!unwrapped.ok) {
+        setError((current) => current ? `${current}; Failed to load projects: ${unwrapped.error}` : `Failed to load projects: ${unwrapped.error}`)
+        setProjects([])
+      } else {
+        setProjects(Array.isArray(unwrapped.value) ? unwrapped.value : [])
+      }
     }
 
     if (!taxResult.ok) {
@@ -211,12 +231,12 @@ export function InvoicingPage() {
 
         <div className="exec-dash__row">
           <div className="exec-dash__panel">
-            {error && <div className="exec-dash__state-card exec-dash__state-card--error" style={{ marginBottom: '1rem' }}>
+            {error && <div className="exec-dash__state-card exec-dash__state-card--error exec-dash__state-card--inline">
               <h2 className="exec-dash__state-title">Error</h2>
               <p className="exec-dash__state-message">{error}</p>
             </div>}
 
-            {success && <div className="exec-dash__state-card" style={{ marginBottom: '1rem', borderLeft: '4px solid #22c55e' }}>
+            {success && <div className="exec-dash__state-card exec-dash__state-card--success exec-dash__state-card--inline">
               <h2 className="exec-dash__state-title">Invoice Created</h2>
               <p className="exec-dash__state-message">
                 Invoice: <strong>{success.invoice_id}</strong>
@@ -240,50 +260,49 @@ export function InvoicingPage() {
             </div>}
 
             <form onSubmit={(event) => void handleSubmit(event)}>
-              <label style={{ marginBottom: '1rem', display: 'block' }}>
-                Customer *
-                <select
-                  value={form.customer_id}
-                  onChange={(event) => setForm((current) => ({ ...current, customer_id: event.target.value }))}
-                  required
-                  style={{ display: 'block', width: '100%', marginTop: '0.25rem', padding: '0.5rem' }}
-                >
-                  <option value="">Select a customer</option>
-                  {customers.map((customer) => (
-                    <option key={customer.customer_id || customer.id} value={customer.customer_id || customer.id}>
-                      {customer.name || customer.customer_name || '—'}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <div className="form-grid">
+                <label className="form-field">
+                  <span className="form-field__label">Customer *</span>
+                  <select
+                    value={form.customer_id}
+                    onChange={(event) => setForm((current) => ({ ...current, customer_id: event.target.value }))}
+                    required
+                  >
+                    <option value="">Select a customer</option>
+                    {customers.map((customer) => (
+                      <option key={customer.customer_id || customer.id} value={customer.customer_id || customer.id}>
+                        {customer.name || customer.customer_name || '—'}
+                      </option>
+                    ))}
+                  </select>
+                </label>
 
-              <label style={{ marginBottom: '1rem', display: 'block' }}>
-                Project *
-                <select
-                  value={form.project_id}
-                  onChange={(event) => setForm((current) => ({ ...current, project_id: event.target.value }))}
-                  required
-                  style={{ display: 'block', width: '100%', marginTop: '0.25rem', padding: '0.5rem' }}
-                >
-                  <option value="">Select a project</option>
-                  {projects.map((project) => (
-                    <option key={project.project_id || project.id} value={project.project_id || project.id}>
-                      {project.name || project.project_name || '—'}
-                    </option>
-                  ))}
-                </select>
-              </label>
+                <label className="form-field">
+                  <span className="form-field__label">Project *</span>
+                  <select
+                    value={form.project_id}
+                    onChange={(event) => setForm((current) => ({ ...current, project_id: event.target.value }))}
+                    required
+                  >
+                    <option value="">Select a project</option>
+                    {projects.map((project) => (
+                      <option key={project.project_id || project.id} value={project.project_id || project.id}>
+                        {project.name || project.project_name || '—'}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
 
-              <fieldset style={{ marginBottom: '1rem', border: '1px solid #ccc', padding: '1rem' }}>
-                <legend>Line Items *</legend>
+              <fieldset className="form-fieldset">
+                <legend className="form-fieldset__legend">Line Items *</legend>
                 {form.line_items.map((item, index) => (
-                  <div key={index} style={{ marginBottom: '0.75rem', display: 'grid', gridTemplateColumns: '1fr 150px 50px', gap: '0.5rem' }}>
+                  <div key={index} className="invoice-line-items__row">
                     <input
                       type="text"
                       placeholder="Description"
                       value={item.description}
                       onChange={(event) => handleLineItemChange(index, 'description', event.target.value)}
-                      style={{ padding: '0.5rem' }}
                     />
                     <input
                       type="number"
@@ -292,14 +311,12 @@ export function InvoicingPage() {
                       onChange={(event) => handleLineItemChange(index, 'amount', event.target.value)}
                       step="0.01"
                       min="0"
-                      style={{ padding: '0.5rem' }}
                     />
                     <button
                       type="button"
                       className="button button--secondary"
                       onClick={() => removeLineItem(index)}
                       disabled={form.line_items.length === 1}
-                      style={{ padding: '0.5rem', cursor: form.line_items.length === 1 ? 'not-allowed' : 'pointer' }}
                     >
                       Remove
                     </button>
@@ -307,65 +324,65 @@ export function InvoicingPage() {
                 ))}
                 <button
                   type="button"
-                  className="button button--secondary"
+                  className="button button--secondary invoice-line-items__add-btn"
                   onClick={addLineItem}
-                  style={{ marginTop: '0.5rem' }}
                 >
                   + Add Line Item
                 </button>
               </fieldset>
 
-              <fieldset style={{ marginBottom: '1rem', border: '1px solid #ccc', padding: '1rem' }}>
-                <legend>Tax Toggles</legend>
-                <label style={{ display: 'block', marginBottom: '0.5rem' }}>
+              <fieldset className="form-fieldset">
+                <legend className="form-fieldset__legend">Tax Toggles</legend>
+                <label className="form-fieldset__checkbox">
                   <input
                     type="checkbox"
                     checked={form.apply_vat}
                     onChange={(event) => setForm((current) => ({ ...current, apply_vat: event.target.checked }))}
                   />
-                  {` ${vatLabel}`}
+                  {vatLabel}
                 </label>
-                <label style={{ display: 'block', marginBottom: '0.5rem' }}>
+                <label className="form-fieldset__checkbox">
                   <input
                     type="checkbox"
                     checked={form.apply_nhil}
                     onChange={(event) => setForm((current) => ({ ...current, apply_nhil: event.target.checked }))}
                   />
-                  {` ${nhilLabel}`}
+                  {nhilLabel}
                 </label>
-                <label style={{ display: 'block', marginBottom: '0' }}>
+                <label className="form-fieldset__checkbox">
                   <input
                     type="checkbox"
                     checked={form.apply_getfund}
                     onChange={(event) => setForm((current) => ({ ...current, apply_getfund: event.target.checked }))}
                   />
-                  {` ${getfundLabel}`}
+                  {getfundLabel}
                 </label>
               </fieldset>
 
-              <div style={{ padding: '1rem', backgroundColor: 'var(--color-bg-muted)', marginBottom: '1rem', borderRadius: '4px', color: 'var(--color-text)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+              <div className="summary-box">
+                <div className="summary-box__row">
                   <strong>Subtotal:</strong>
                   <span>{formatMoneyGhs(subtotal)}</span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                <div className="summary-box__row">
                   <strong>Tax preview:</strong>
                   <span>{formatMoneyGhs(taxAmount)}</span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.2em', fontWeight: 'bold' }}>
+                <div className="summary-box__row summary-box__row--total">
                   <strong>Total (with taxes):</strong>
                   <span>{formatMoneyGhs(totalWithTaxes)}</span>
                 </div>
               </div>
 
-              <button
-                type="submit"
-                className="button button--primary"
-                disabled={submitting}
-                style={{ width: '100%' }}
-              >
-                {submitting ? 'Creating Invoice...' : 'Create Invoice'}
-              </button>
+              <div className="form-actions">
+                <button
+                  type="submit"
+                  className="button button--primary"
+                  disabled={submitting}
+                >
+                  {submitting ? 'Creating Invoice...' : 'Create Invoice'}
+                </button>
+              </div>
             </form>
           </div>
         </div>
