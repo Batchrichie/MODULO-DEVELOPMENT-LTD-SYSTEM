@@ -33,13 +33,22 @@ interface EmployeeRecord {
   staff_category?: string | null
 }
 
+interface SettlementAccountRecord {
+  account_id?: string
+  id?: string
+  name?: string | null
+  payment_method_type?: string | null
+}
+
 export function PayrollPage() {
   const [employees, setEmployees] = useState<EmployeeRecord[]>([])
+  const [settlementAccounts, setSettlementAccounts] = useState<SettlementAccountRecord[]>([])
   const [createdRun, setCreatedRun] = useState<PayrollRunRecord | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [runPeriod, setRunPeriod] = useState(new Date().toISOString().slice(0, 7))
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null)
+  const [selectedSettlementAccountId, setSelectedSettlementAccountId] = useState<string>('')
   const [submitting, setSubmitting] = useState(false)
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
   const [showModal, setShowModal] = useState(false)
@@ -53,11 +62,14 @@ export function PayrollPage() {
     setError(null)
     setStatusMessage(null)
 
-    const employeesResult = await supabase.schema('api').rpc('get_records', {
-      p_resource: 'employees',
-      p_page: 1,
-      p_limit: 200,
-    })
+    const [employeesResult, settlementAccountsResult] = await Promise.all([
+      supabase.schema('api').rpc('get_records', {
+        p_resource: 'employees',
+        p_page: 1,
+        p_limit: 200,
+      }),
+      supabase.schema('api').rpc('list_payment_method_accounts'),
+    ])
 
     if (employeesResult.error) {
       setError(employeesResult.error.message)
@@ -66,8 +78,28 @@ export function PayrollPage() {
       setEmployees(Array.isArray(employeesResult.data) ? employeesResult.data : employeesResult.data?.rows || employeesResult.data?.data || [])
     }
 
+    if (settlementAccountsResult.error) {
+      setError((current) => current ? `${current}; ${settlementAccountsResult.error.message}` : settlementAccountsResult.error.message)
+      setSettlementAccounts([])
+    } else {
+      const accounts = Array.isArray(settlementAccountsResult.data)
+        ? settlementAccountsResult.data
+        : settlementAccountsResult.data?.rows || settlementAccountsResult.data?.data || []
+      setSettlementAccounts(accounts)
+      if (!selectedSettlementAccountId && accounts.length > 0) {
+        setSelectedSettlementAccountId(accounts[0].account_id ?? accounts[0].id ?? '')
+      }
+    }
+
     setLoading(false)
   }
+
+  const employeeNameById = useMemo(() => {
+    return employees.reduce((acc, employee) => {
+      acc[employee.employee_id ?? employee.id ?? ''] = employee.full_name ?? 'Unknown employee'
+      return acc
+    }, {} as Record<string, string>)
+  }, [employees])
 
   const selectedRunPayslips = useMemo(() => {
     if (!selectedRunId || !createdRun?.payslips) return []
@@ -121,7 +153,7 @@ export function PayrollPage() {
     setCreatedRun(nextRun)
     setSelectedRunId(runId)
     setShowModal(false)
-    setStatusMessage(`Run created successfully. Response: ${JSON.stringify(data)}`)
+    setStatusMessage(`Payroll run ${runId} created for ${runPeriod}. ${payslips.length} payslip(s) returned from the create response.`)
     await loadAllData()
     setSubmitting(false)
   }
@@ -130,11 +162,11 @@ export function PayrollPage() {
     setSubmitting(true)
     setError(null)
     setStatusMessage(null)
-    const { data, error } = await supabase.schema('api').rpc('payroll_run_approve', { p_run_id: runId })
+    const { error } = await supabase.schema('api').rpc('payroll_run_approve', { p_run_id: runId })
     if (error) {
       setError(error.message)
     } else {
-      setStatusMessage(`Approve response: ${JSON.stringify(data)}`)
+      setStatusMessage(`Payroll run ${runId} has been approved.`)
       await loadAllData()
     }
     setSubmitting(false)
@@ -144,11 +176,11 @@ export function PayrollPage() {
     setSubmitting(true)
     setError(null)
     setStatusMessage(null)
-    const { data, error } = await supabase.schema('api').rpc('payroll_run_reject', { p_run_id: runId })
+    const { error } = await supabase.schema('api').rpc('payroll_run_reject', { p_run_id: runId })
     if (error) {
       setError(error.message)
     } else {
-      setStatusMessage(`Reject response: ${JSON.stringify(data)}`)
+      setStatusMessage(`Payroll run ${runId} has been rejected.`)
       await loadAllData()
     }
     setSubmitting(false)
@@ -158,14 +190,24 @@ export function PayrollPage() {
     setSubmitting(true)
     setError(null)
     setStatusMessage(null)
-    const { data, error } = await supabase.schema('api').rpc('payroll_run_pay', {
+
+    if (!selectedSettlementAccountId) {
+      setError('Choose a settlement account before paying the run.')
+      setSubmitting(false)
+      return
+    }
+
+    const { error } = await supabase.schema('api').rpc('payroll_run_pay', {
       p_run_id: runId,
-      p_payload: {},
+      p_payload: {
+        settlement_account_id: selectedSettlementAccountId,
+      },
     })
     if (error) {
       setError(error.message)
     } else {
-      setStatusMessage(`Pay response: ${JSON.stringify(data)}`)
+      const selectedAccount = settlementAccounts.find((account) => (account.account_id ?? account.id) === selectedSettlementAccountId)
+      setStatusMessage(`Payroll run ${runId} has been paid using ${selectedAccount?.name ?? 'the selected settlement account'}.`)
       await loadAllData()
     }
     setSubmitting(false)
@@ -253,28 +295,45 @@ export function PayrollPage() {
             {!createdRun ? (
               <div className="exec-dash__state-card exec-dash__state-card--empty"><h2 className="exec-dash__state-title">No run created yet</h2><p className="exec-dash__state-message">Create a payroll run to expose its inline payslips and action controls.</p></div>
             ) : (
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr>
-                      <th style={{ textAlign: 'left', padding: '0.5rem' }}>Period</th>
-                      <th style={{ textAlign: 'left', padding: '0.5rem' }}>Status</th>
-                      <th style={{ textAlign: 'left', padding: '0.5rem' }}>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td style={{ padding: '0.5rem' }}>{createdRun.period ?? '—'}</td>
-                      <td style={{ padding: '0.5rem' }}>{createdRun.status ?? '—'}</td>
-                      <td style={{ padding: '0.5rem' }}>
-                        <button type="button" className="button button--secondary" onClick={() => setSelectedRunId(createdRun.run_id ?? createdRun.id ?? null)}>View payslips</button>{' '}
-                        <button type="button" className="button button--secondary" onClick={() => void approveRun(createdRun.run_id ?? createdRun.id ?? '')}>Approve</button>{' '}
-                        <button type="button" className="button button--secondary" onClick={() => void rejectRun(createdRun.run_id ?? createdRun.id ?? '')}>Reject</button>{' '}
-                        <button type="button" className="button button--secondary" onClick={() => void payRun(createdRun.run_id ?? createdRun.id ?? '')}>Pay</button>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
+              <div style={{ display: 'grid', gap: '0.75rem' }}>
+                <label style={{ display: 'block' }}>
+                  Settlement account
+                  <select
+                    value={selectedSettlementAccountId}
+                    onChange={(event) => setSelectedSettlementAccountId(event.target.value)}
+                    style={{ display: 'block', width: '100%', marginTop: '0.25rem', padding: '0.5rem' }}
+                  >
+                    {settlementAccounts.length === 0 ? <option value="">No payment accounts available</option> : settlementAccounts.map((account) => (
+                      <option key={account.account_id ?? account.id ?? account.name} value={account.account_id ?? account.id ?? ''}>
+                        {account.name ?? 'Unnamed account'} ({account.payment_method_type ?? 'Unknown'})
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead>
+                      <tr>
+                        <th style={{ textAlign: 'left', padding: '0.5rem' }}>Period</th>
+                        <th style={{ textAlign: 'left', padding: '0.5rem' }}>Status</th>
+                        <th style={{ textAlign: 'left', padding: '0.5rem' }}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td style={{ padding: '0.5rem' }}>{createdRun.period ?? '—'}</td>
+                        <td style={{ padding: '0.5rem' }}>{createdRun.status ?? '—'}</td>
+                        <td style={{ padding: '0.5rem' }}>
+                          <button type="button" className="button button--secondary" onClick={() => setSelectedRunId(createdRun.run_id ?? createdRun.id ?? null)}>View payslips</button>{' '}
+                          <button type="button" className="button button--secondary" onClick={() => void approveRun(createdRun.run_id ?? createdRun.id ?? '')}>Approve</button>{' '}
+                          <button type="button" className="button button--secondary" onClick={() => void rejectRun(createdRun.run_id ?? createdRun.id ?? '')}>Reject</button>{' '}
+                          <button type="button" className="button button--secondary" onClick={() => void payRun(createdRun.run_id ?? createdRun.id ?? '')} disabled={!selectedSettlementAccountId}>Pay</button>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
           </div>
@@ -295,16 +354,20 @@ export function PayrollPage() {
                     <th style={{ textAlign: 'right', padding: '0.5rem' }}>Gross salary</th>
                     <th style={{ textAlign: 'right', padding: '0.5rem' }}>PAYE</th>
                     <th style={{ textAlign: 'right', padding: '0.5rem' }}>SSNIT employee</th>
+                    <th style={{ textAlign: 'right', padding: '0.5rem' }}>SSNIT employer</th>
+                    <th style={{ textAlign: 'right', padding: '0.5rem' }}>Other deductions</th>
                     <th style={{ textAlign: 'right', padding: '0.5rem' }}>Net salary</th>
                   </tr>
                 </thead>
                 <tbody>
                   {selectedRunPayslips.map((payslip) => (
                     <tr key={payslip.payslip_id ?? payslip.id ?? payslip.employee_id}>
-                      <td style={{ padding: '0.5rem' }}>{payslip.employee_id ?? '—'}</td>
+                      <td style={{ padding: '0.5rem' }}>{employeeNameById[payslip.employee_id ?? ''] ?? payslip.employee_id ?? '—'}</td>
                       <td style={{ textAlign: 'right', padding: '0.5rem' }}>{formatMoneyGhs(Number(payslip.gross_salary ?? 0) || 0)}</td>
                       <td style={{ textAlign: 'right', padding: '0.5rem' }}>{formatMoneyGhs(Number(payslip.paye ?? 0) || 0)}</td>
                       <td style={{ textAlign: 'right', padding: '0.5rem' }}>{formatMoneyGhs(Number(payslip.ssnit_employee ?? 0) || 0)}</td>
+                      <td style={{ textAlign: 'right', padding: '0.5rem' }}>{formatMoneyGhs(Number(payslip.ssnit_employer ?? 0) || 0)}</td>
+                      <td style={{ textAlign: 'right', padding: '0.5rem' }}>{formatMoneyGhs(Number(payslip.other_deductions ?? 0) || 0)}</td>
                       <td style={{ textAlign: 'right', padding: '0.5rem' }}>{formatMoneyGhs(Number(payslip.net_salary ?? 0) || 0)}</td>
                     </tr>
                   ))}
