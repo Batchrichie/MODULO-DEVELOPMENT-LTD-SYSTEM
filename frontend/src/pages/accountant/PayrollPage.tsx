@@ -1,22 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { formatMoneyGhs } from '../../lib/formatMoney'
 import { supabase } from '../../lib/supabase'
+import { unwrapRpcResponse } from '../../lib/common'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { EmptyState } from '../../components/EmptyState'
 import { PendingBackendNotice } from '../../components/PendingBackendNotice'
 import { deriveStatusBadgeFromState, StatusBadge } from '../../components/StatusBadge'
 import '../../styles/executive-dashboard.css'
-
-function unwrapRpcResponse<T>(data: unknown): { ok: boolean; value: T | null; error: string | null } {
-  const envelope = data as { success?: boolean; data: T; error?: { code: string; message: string } | null } | null
-  if (!envelope) {
-    return { ok: false, value: null, error: 'No response from server' }
-  }
-  if (envelope.success === false) {
-    return { ok: false, value: null, error: envelope.error?.message ?? 'Unknown error' }
-  }
-  return { ok: true, value: envelope.data, error: null }
-}
 
 interface PayrollRunRecord {
   run_id?: string
@@ -403,7 +393,7 @@ export function PayrollPage() {
 
         {statusMessage && <div className="exec-dash__state-card exec-dash__state-card--inline exec-dash__state-card--success"><h2 className="exec-dash__state-title">RPC response</h2><p className="exec-dash__state-message">{statusMessage}</p></div>}
 
-        {formError && <div className="exec-dash__state-card exec-dash__state-card--error exec-dash__state-card--inline"><h2 className="exec-dash__state-title">Form error</h2><p className="exec-dash__state-message">{formError}</p></div>}
+        {!showModal && formError && <div className="exec-dash__state-card exec-dash__state-card--error exec-dash__state-card--inline"><h2 className="exec-dash__state-title">Form error</h2><p className="exec-dash__state-message">{formError}</p></div>}
 
         {blockingEmployees.length > 0 && (
           <div className="exec-dash__state-card exec-dash__state-card--warning exec-dash__state-card--inline">

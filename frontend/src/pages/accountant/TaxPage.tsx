@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { fetchTaxRates, taxRatesUpdate, reportTax } from '../../lib/rpc/accountant'
+import { Modal } from '../../components/Modal'
+import { FormErrorBanner } from '../../components/FormErrorBanner'
 import '../../styles/executive-dashboard.css'
 
 interface TaxRateDisplay {
@@ -271,38 +273,37 @@ export function TaxPage() {
         )}
       </section>
 
-      {showUpdateModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(10, 14, 26, 0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', zIndex: 1000 }}>
-          <div style={{ width: '100%', maxWidth: 460, background: 'var(--surface)', borderRadius: 16, padding: '1rem', boxShadow: '0 20px 45px rgba(0,0,0,0.35)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-              <h2 style={{ margin: 0 }}>Update Tax Rate</h2>
-              <button type="button" className="button button--secondary" onClick={() => setShowUpdateModal(false)}>Close</button>
-            </div>
-            <form onSubmit={(event) => void handleUpdateRate(event)}>
-              {formError && <div style={{ background: 'rgba(255, 64, 64, 0.1)', border: '1px solid #ff4040', color: '#ff4040', padding: '0.75rem', borderRadius: '8px', marginBottom: '1rem' }}><strong>Error:</strong> {formError}</div>}
-              <label>
-                Tax Type
-                <select value={selectedTaxType} onChange={(event) => setSelectedTaxType(event.target.value)} required style={{ display: 'block', width: '100%', marginTop: '0.25rem', marginBottom: '0.75rem' }}>
-                  <option value="">Select tax type</option>
-                  {uniqueTaxTypes.map((type) => (
-                    <option key={type} value={type}>
-                      {type}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Rate (%)
-                <input type="number" value={selectedRate} onChange={(event) => setSelectedRate(event.target.value)} min="0" max="100" step="0.01" required style={{ display: 'block', width: '100%', marginTop: '0.25rem', marginBottom: '0.75rem' }} />
-              </label>
-              <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                <button type="button" className="button button--secondary" onClick={() => setShowUpdateModal(false)}>Cancel</button>
-                <button type="submit" className="button button--primary" disabled={submitting}>{submitting ? 'Updating…' : 'Update Rate'}</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <Modal
+        open={showUpdateModal}
+        onClose={() => setShowUpdateModal(false)}
+        title="Update Tax Rate"
+        maxWidth={460}
+        footer={
+          <>
+            <button type="button" className="button button--secondary" onClick={() => setShowUpdateModal(false)}>Cancel</button>
+            <button type="submit" form="tax-update-form" className="button button--primary" disabled={submitting}>{submitting ? 'Updating…' : 'Update Rate'}</button>
+          </>
+        }
+      >
+        <form id="tax-update-form" onSubmit={(event) => void handleUpdateRate(event)}>
+          <FormErrorBanner message={formError} />
+          <label>
+            Tax Type
+            <select value={selectedTaxType} onChange={(event) => setSelectedTaxType(event.target.value)} required style={{ display: 'block', width: '100%', marginTop: '0.25rem', marginBottom: '0.75rem' }}>
+              <option value="">Select tax type</option>
+              {uniqueTaxTypes.map((type) => (
+                <option key={type} value={type}>
+                  {type}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Rate (%)
+            <input type="number" value={selectedRate} onChange={(event) => setSelectedRate(event.target.value)} min="0" max="100" step="0.01" required style={{ display: 'block', width: '100%', marginTop: '0.25rem', marginBottom: '0.75rem' }} />
+          </label>
+        </form>
+      </Modal>
     </article>
   )
 }

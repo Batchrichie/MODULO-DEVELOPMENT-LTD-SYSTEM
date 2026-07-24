@@ -122,6 +122,32 @@ export type TaxRates = {
   [key: string]: number | undefined
 }
 
+export type CompletionAssessment = {
+  assessment_id?: string
+  project_id?: string
+  period?: string
+  percent_complete?: number
+  status?: string
+  assessed_by?: string | null
+  approved_by?: string | null
+  journal_id?: string | null
+  created_at?: string | null
+  [key: string]: unknown
+}
+
+export type ProjectProfitability = {
+  project_id?: string
+  project_name?: string
+  contract_value?: number
+  revenue_recognized_to_date?: number
+  expenses_to_date?: number
+  gross_profit?: number
+  gross_margin_pct?: number | null
+  wip_drawn_down_via_invoicing?: number
+  wip_balance_undrawn?: number
+  [key: string]: unknown
+}
+
 export type Expense = {
   expense_id?: string
   id?: string
@@ -305,12 +331,17 @@ export async function completionAssessmentSubmit(
   projectId: string,
   period: string,
   percentComplete: number,
-): Promise<AccountantRpcResult<{ success: boolean }>> {
-  return callRpc<{ success: boolean }>('completion_assessment_submit', {
+): Promise<AccountantRpcResult<CompletionAssessment>> {
+  const result = await callRpc<CompletionAssessment>('completion_assessment_submit', {
     p_project_id: projectId,
     p_period: period,
     p_percent_complete: percentComplete,
   })
+
+  if (!result.ok) return result
+
+  // result.data is the created assessment object
+  return { ok: true, data: result.data as CompletionAssessment, raw: result.raw }
 }
 
 export async function reportBudgetVsActual(
@@ -327,6 +358,14 @@ export async function reportBudgetVsActual(
   }>
 > {
   return callRpc('report_budget_vs_actual', { p_project_id: projectId })
+}
+
+export async function fetchProjectProfitability(
+  projectId: string,
+): Promise<AccountantRpcResult<ProjectProfitability>> {
+  const result = await callRpc<ProjectProfitability>('report_project_profitability', { p_project_id: projectId })
+  if (!result.ok) return result
+  return { ok: true, data: result.data as ProjectProfitability, raw: result.raw }
 }
 
 export function normalizeTaxRates(rows: TaxRateSetting[]): TaxRates {

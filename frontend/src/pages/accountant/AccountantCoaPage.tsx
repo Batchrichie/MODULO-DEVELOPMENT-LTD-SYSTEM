@@ -1,10 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { formatMoneyGhs } from '../../lib/formatMoney'
 import { createAccount, deactivateAccount, fetchAccounts, updateAccount } from '../../lib/rpc/accountant'
-import { ConfirmDialog } from '../../components/ConfirmDialog'
-import { EmptyState } from '../../components/EmptyState'
-import { SearchField } from '../../components/SearchField'
-import { deriveStatusBadgeFromState, StatusBadge } from '../../components/StatusBadge'
 import '../../styles/executive-dashboard.css'
 
 interface CoaFormState {
@@ -14,7 +10,6 @@ interface CoaFormState {
   payment_method_type: string
   account_number: string
   provider_name: string
-  account_code?: string
 }
 
 const emptyForm = (): CoaFormState => ({
@@ -24,7 +19,6 @@ const emptyForm = (): CoaFormState => ({
   payment_method_type: '',
   account_number: '',
   provider_name: '',
-  account_code: '',
 })
 
 function MetricCard({ label, value, tone, icon }: { label: string; value: string; tone: string; icon: string }) {
@@ -63,32 +57,12 @@ export function AccountantCoaPage() {
   const [submitting, setSubmitting] = useState(false)
   const [activeId, setActiveId] = useState<string | null>(null)
   const [showModal, setShowModal] = useState(false)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [filterType, setFilterType] = useState<string>('__all__')
-  const [viewingAccount, setViewingAccount] = useState<any>(null)
-  const [deactivateTarget, setDeactivateTarget] = useState<{ id: string; name: string } | null>(null)
+  const [formError, setFormError] = useState<string | null>(null)
+  const [statusMessage, setStatusMessage] = useState<string | null>(null)
 
   useEffect(() => {
     void loadAccounts()
   }, [])
-
-  useEffect(() => {
-    if (!showModal) return
-    function onKey(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
-        setShowModal(false)
-        setActiveId(null)
-        setForm(emptyForm())
-      }
-    }
-    document.addEventListener('keydown', onKey)
-    const originalOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.removeEventListener('keydown', onKey)
-      document.body.style.overflow = originalOverflow
-    }
-  }, [showModal])
 
   async function loadAccounts() {
     setLoading(true)
@@ -107,6 +81,7 @@ export function AccountantCoaPage() {
     event.preventDefault()
     setSubmitting(true)
     setError(null)
+    setFormError(null)
 
     const payload = {
       name: form.name,
@@ -121,19 +96,18 @@ export function AccountantCoaPage() {
     if (result.ok) {
       setForm(emptyForm())
       setActiveId(null)
-      setShowModal(false)
       await loadAccounts()
+      setShowModal(false)
+      setStatusMessage(activeId ? 'Account updated' : 'Account created')
     } else {
-      setError(result.error)
+      setFormError(result.error)
     }
 
     setSubmitting(false)
   }
 
-  async function handleDeactivateConfirm(_reason?: string) {
-    if (!deactivateTarget) return
-    const result = await deactivateAccount(deactivateTarget.id)
-    setDeactivateTarget(null)
+  async function handleDeactivate(id: string) {
+    const result = await deactivateAccount(id)
     if (result.ok) {
       await loadAccounts()
     } else {
@@ -142,26 +116,6 @@ export function AccountantCoaPage() {
   }
 
   const totalBalance = useMemo(() => accounts.reduce((sum, account) => sum + (Number(account.balance ?? 0) || 0), 0), [accounts])
-
-  const accountTypes = useMemo(() => {
-    const set = new Set<string>()
-    accounts.forEach((account) => { if (account.type) set.add(String(account.type)) })
-    return Array.from(set).sort()
-  }, [accounts])
-
-  const filteredAccounts = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase()
-    return accounts.filter((account) => {
-      if (filterType !== '__all__' && (account.type ?? '') !== filterType) return false
-      if (!q) return true
-      return (
-        (account.code ?? '').toLowerCase().includes(q) ||
-        (account.name ?? '').toLowerCase().includes(q) ||
-        (account.type ?? '').toLowerCase().includes(q) ||
-        (account.reporting_group ?? '').toLowerCase().includes(q)
-      )
-    })
-  }, [accounts, searchQuery, filterType])
 
   const content = () => {
     if (loading) {
@@ -173,132 +127,41 @@ export function AccountantCoaPage() {
     }
 
     if (!accounts.length) {
-      return (
-        <EmptyState
-          icon="📒"
-          title="No accounts found"
-          description="No accounts are available yet. Click New account to set up your Chart of Accounts."
-          action={<button type="button" className="button button--primary" onClick={() => { setActiveId(null); setForm(emptyForm()); setShowModal(true) }}>New account</button>}
-        />
-      )
+      return <div className="exec-dash__state-card exec-dash__state-card--empty"><h2 className="exec-dash__state-title">No accounts found</h2><p className="exec-dash__state-message">No accounts are available yet.</p></div>
     }
 
     return (
       <div className="exec-dash__panel">
-        <div className="registry-toolbar">
-          <div className="registry-toolbar__search-row">
-            <SearchField value={searchQuery} onChange={setSearchQuery} placeholder="Search by code, name, or type…" />
-            <label className="form-field" style={{ margin: 0, minWidth: '12rem' }}>
-              <select
-                value={filterType}
-                onChange={(event) => setFilterType(event.target.value)}
-              >
-                <option value="__all__">All account types</option>
-                {accountTypes.map((type) => (
-                  <option key={type} value={type}>{type}</option>
-                ))}
-              </select>
-            </label>
-          </div>
-          <div className="registry-toolbar__actions">
-            <button
-              type="button"
-              className="button button--secondary"
-              disabled
-              title="Export CSV — pending backend report RPC"
-            >
-              Export
-            </button>
-            <button type="button" className="button button--secondary" onClick={() => void loadAccounts()}>Refresh</button>
-            <button type="button" className="button button--primary" onClick={() => { setActiveId(null); setForm(emptyForm()); setShowModal(true) }}>New account</button>
-          </div>
-        </div>
-
-        {!filteredAccounts.length ? (
-          <EmptyState
-            icon="🔎"
-            title="No matching accounts"
-            description={`No accounts match the current search/filter (${searchQuery || '—'} / ${filterType === '__all__' ? 'All types' : filterType}). Try adjusting the query.`}
-          />
-        ) : (
-          <div className="table-wrapper">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Code</th>
-                  <th>Name</th>
-                  <th>Type</th>
-                  <th>Reporting Group</th>
-                  <th>Status</th>
-                  <th>Balance</th>
-                  <th>Actions</th>
+        <div className="exec-dash__panel-title">Account registry</div>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr>
+                <th style={{ textAlign: 'left', padding: '0.5rem' }}>Code</th>
+                <th style={{ textAlign: 'left', padding: '0.5rem' }}>Name</th>
+                <th style={{ textAlign: 'left', padding: '0.5rem' }}>Type</th>
+                <th style={{ textAlign: 'left', padding: '0.5rem' }}>Reporting Group</th>
+                <th style={{ textAlign: 'left', padding: '0.5rem' }}>Status</th>
+                <th style={{ textAlign: 'left', padding: '0.5rem' }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {accounts.map((account) => (
+                <tr key={account.account_id ?? account.id ?? account.name}>
+                  <td style={{ padding: '0.5rem' }}>{account.code ?? '—'}</td>
+                  <td style={{ padding: '0.5rem' }}>{account.name ?? '—'}</td>
+                  <td style={{ padding: '0.5rem' }}>{account.type ?? '—'}</td>
+                  <td style={{ padding: '0.5rem' }}>{account.reporting_group ?? '—'}</td>
+                  <td style={{ padding: '0.5rem' }}>{account.is_postable === false ? 'Inactive' : 'Active'}</td>
+                  <td style={{ padding: '0.5rem' }}>
+                    <button type="button" className="button button--secondary" onClick={() => { setActiveId(account.account_id ?? account.id ?? null); setForm({ name: account.name ?? '', type: account.type ?? 'Asset', reporting_group: account.reporting_group ?? '', payment_method_type: account.payment_method_type ?? '', account_number: account.account_number ?? '', provider_name: account.provider_name ?? '' }); setFormError(null); setShowModal(true); }}>Edit</button>{' '}
+                    <button type="button" className="button button--secondary" onClick={() => void handleDeactivate(account.account_id ?? account.id ?? '')}>Deactivate</button>
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {filteredAccounts.map((account) => {
-                  const statusLabel = account.is_postable === false ? 'Inactive' : 'Active'
-                  const statusBadge = deriveStatusBadgeFromState(statusLabel)
-                  return (
-                    <tr key={account.account_id ?? account.id ?? account.name} className={account.is_postable === false ? 'data-table__row--muted' : ''}>
-                      <td>{account.code ?? '—'}</td>
-                      <td>
-                        <strong style={{ display: 'block' }}>{account.name ?? '—'}</strong>
-                        {account.payment_method_type && (
-                          <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
-                            {account.provider_name ? `${account.provider_name} · ` : ''}
-                            {account.payment_method_type}
-                            {account.account_number ? ` · ${account.account_number}` : ''}
-                          </span>
-                        )}
-                      </td>
-                      <td>{account.type ?? '—'}</td>
-                      <td>{account.reporting_group ?? '—'}</td>
-                      <td className="data-table__cell--status">
-                        <StatusBadge label={statusBadge.label} tone={statusBadge.tone} />
-                      </td>
-                      <td className="data-table__num">{account.balance != null ? formatMoneyGhs(Number(account.balance) || 0) : '—'}</td>
-                      <td>
-                        <div className="data-table__actions">
-                          <button type="button" className="button button--secondary" onClick={() => setViewingAccount(account)}>View</button>
-                          <button
-                            type="button"
-                            className="button button--secondary"
-                            onClick={() => {
-                              setActiveId(account.account_id ?? account.id ?? null)
-                              setForm({
-                                name: account.name ?? '',
-                                type: account.type ?? 'Asset',
-                                reporting_group: account.reporting_group ?? '',
-                                payment_method_type: account.payment_method_type ?? '',
-                                account_number: account.account_number ?? '',
-                                provider_name: account.provider_name ?? '',
-                                account_code: account.code ?? '',
-                              })
-                              setShowModal(true)
-                            }}
-                          >
-                            Edit
-                          </button>
-                          <button
-                            type="button"
-                            className="button button--secondary"
-                            onClick={() => setDeactivateTarget({
-                              id: account.account_id ?? account.id ?? '',
-                              name: account.name ?? '(unnamed)',
-                            })}
-                            disabled={account.is_postable === false}
-                          >
-                            Deactivate
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     )
   }
@@ -317,213 +180,86 @@ export function AccountantCoaPage() {
         <MetricCard label="Accounts" value={String(accounts.length)} tone="blue" icon="accounts" />
         <MetricCard label="Active" value={String(accounts.filter((account) => account.is_postable !== false).length)} tone="green" icon="active" />
         <MetricCard label="Total Balance" value={formatMoneyGhs(totalBalance)} tone="purple" icon="balance" />
-        <MetricCard label="Mode" value={showModal ? (activeId ? 'Edit' : 'Create') : 'Browse'} tone="orange" icon="mode" />
+        <MetricCard label="Mode" value={activeId ? 'Edit' : 'Create'} tone="orange" icon="mode" />
       </section>
 
       <section className="users-card">
         <div className="users-card__header">
           <div>
             <h2>Account Registry</h2>
-            <p>Create, review, and update the accounts that drive the books. Includes Mobile Money (MTN MoMo, Vodafone Cash, AirtelTigo Money) as CoA records.</p>
+            <p>Create, review, and update the accounts that drive the books.</p>
+          </div>
+          <div className="users-card__actions">
+            <button type="button" className="button button--secondary" onClick={() => void loadAccounts()}>Refresh</button>
+            <button type="button" className="button button--primary" onClick={() => { setActiveId(null); setForm(emptyForm()); setFormError(null); setShowModal(true); setStatusMessage(null) }}>New account</button>
           </div>
         </div>
-
         <div className="exec-dash__row">
+          <div className="exec-dash__panel">
+            {formError && <div className="exec-dash__state-card exec-dash__state-card--error exec-dash__state-card--inline"><h2 className="exec-dash__state-title">Error</h2><p className="exec-dash__state-message">{formError}</p></div>}
+            {statusMessage && <div className="exec-dash__state-card exec-dash__state-card--success exec-dash__state-card--inline"><h2 className="exec-dash__state-title">Success</h2><p className="exec-dash__state-message">{statusMessage}</p></div>}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ fontWeight: 600 }}>{/* Placeholder left panel actions */}</div>
+              <div />
+            </div>
+          </div>
           {content()}
         </div>
-      </section>
-
-      {showModal && (
-        <div
-          className="modal-overlay"
-          onClick={(event) => {
-            if (event.target !== event.currentTarget) return
-            setShowModal(false)
-            setActiveId(null)
-            setForm(emptyForm())
-          }}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="coa-modal-title"
-        >
-          <div className="modal">
-            <div className="modal__header">
-              <div className="modal__header-text">
-                <h2 id="coa-modal-title" className="modal__title">{activeId ? 'Update account' : 'New account'}</h2>
-                <p className="modal__subtitle">{activeId ? 'Update an existing postable ledger account.' : 'Create a postable ledger account.'}</p>
-              </div>
-              <button
-                type="button"
-                aria-label="Close dialog"
-                className="modal__close"
-                onClick={() => { setShowModal(false); setActiveId(null); setForm(emptyForm()) }}
-              >
-                ×
-              </button>
-            </div>
-            <form onSubmit={(event) => void handleSubmit(event)}>
-              <div className="modal__body">
-                {error && <div className="exec-dash__state-card exec-dash__state-card--error exec-dash__state-card--inline"><h2 className="exec-dash__state-title">Error</h2><p className="exec-dash__state-message">{error}</p></div>}
-                <div className="form-grid">
-                  <label className="form-field">
-                    <span className="form-field__label">Account code</span>
-                    <input
-                      value={form.account_code ?? ''}
-                      placeholder="e.g. 1130"
-                      onChange={(event) => setForm((current) => ({ ...current, account_code: event.target.value }))}
-                      readOnly
-                    />
-                  </label>
-                  <label className="form-field">
-                    <span className="form-field__label">Account type</span>
-                    <select value={form.type} onChange={(event) => setForm((current) => ({ ...current, type: event.target.value }))}>
-                      <option value="Asset">Asset</option>
-                      <option value="Contra-Asset">Contra-Asset</option>
-                      <option value="Liability">Liability</option>
-                      <option value="Equity">Equity</option>
-                      <option value="Income">Income</option>
-                      <option value="Expense">Expense</option>
-                    </select>
-                  </label>
-                  <label className="form-field form-field--full">
-                    <span className="form-field__label">Account name</span>
-                    <input
-                      value={form.name}
-                      placeholder="e.g. Petty Cash"
-                      onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
-                      required
-                    />
-                  </label>
-                  <label className="form-field">
-                    <span className="form-field__label">Reporting group</span>
-                    <input
-                      value={form.reporting_group}
-                      placeholder="Current Assets"
-                      onChange={(event) => setForm((current) => ({ ...current, reporting_group: event.target.value }))}
-                      required
-                    />
-                  </label>
-                  <label className="form-field">
-                    <span className="form-field__label">Payment method (optional)</span>
-                    <select
-                      value={form.payment_method_type ? form.payment_method_type : '__none__'}
-                      onChange={(event) => setForm((current) => ({ ...current, payment_method_type: event.target.value === '__none__' ? '' : event.target.value }))}
-                    >
-                      <option value="__none__">Not a payment account</option>
-                      <option value="Cash">Cash</option>
-                      <option value="Bank">Bank</option>
-                      <option value="MTN Mobile Money">MTN Mobile Money</option>
-                      <option value="Vodafone Cash">Vodafone Cash</option>
-                      <option value="AirtelTigo Money">AirtelTigo Money</option>
-                      <option value="Card">Card</option>
-                      <option value="Bank Transfer">Bank Transfer</option>
-                    </select>
-                  </label>
-                  <label className="form-field form-field--full">
-                    <span className="form-field__label">Provider / account number (optional)</span>
-                    <input
-                      value={`${form.provider_name ?? ''}${form.provider_name && form.account_number ? ' · ' : ''}${form.account_number ?? ''}`}
-                      placeholder="e.g. GCB · 0123456789"
-                      onChange={(event) => {
-                        const raw = event.target.value
-                        const parts = raw.split('·').map((s) => s.trim())
-                        setForm((current) => ({ ...current, provider_name: parts[0] ?? '', account_number: parts[1] ?? '' }))
-                      }}
-                    />
-                  </label>
-                </div>
-              </div>
-              <div className="modal__footer">
-                <button type="button" className="button button--secondary" onClick={() => { setShowModal(false); setActiveId(null); setForm(emptyForm()) }}>Cancel</button>
-                <button type="submit" className="button button--primary" disabled={submitting}>{submitting ? 'Saving…' : activeId ? 'Save changes' : 'Save account'}</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {viewingAccount && (
-        <div
-          className="modal-overlay"
-          onClick={(event) => {
-            if (event.target !== event.currentTarget) return
-            setViewingAccount(null)
-          }}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="coa-view-title"
-        >
-          <div className="modal">
-            <div className="modal__header">
-              <div className="modal__header-text">
-                <h2 id="coa-view-title" className="modal__title">Account details</h2>
-                <p className="modal__subtitle">Read-only view — use Edit to make changes.</p>
-              </div>
-              <button type="button" aria-label="Close dialog" className="modal__close" onClick={() => setViewingAccount(null)}>×</button>
-            </div>
-            <div className="modal__body">
-              <div className="form-grid">
-                <label className="form-field"><span className="form-field__label">Account code</span><input value={viewingAccount.code ?? ''} readOnly /></label>
-                <label className="form-field"><span className="form-field__label">Account type</span><input value={viewingAccount.type ?? ''} readOnly /></label>
-                <label className="form-field form-field--full"><span className="form-field__label">Account name</span><input value={viewingAccount.name ?? ''} readOnly /></label>
-                <label className="form-field"><span className="form-field__label">Reporting group</span><input value={viewingAccount.reporting_group ?? ''} readOnly /></label>
-                <label className="form-field"><span className="form-field__label">Status</span>
-                  <div style={{ padding: '0.875rem 1rem' }}>
-                    <StatusBadge label={viewingAccount.is_postable === false ? 'Inactive' : 'Active'} tone={viewingAccount.is_postable === false ? 'error' : 'success'} />
+          {showModal && (
+            <div className="modal-overlay" onClick={(e) => { if (e.target !== e.currentTarget) return; setShowModal(false) }} role="dialog" aria-modal="true">
+              <div className="modal">
+                <div className="modal__header">
+                  <div className="modal__header-text">
+                    <h2 className="modal__title">{activeId ? 'Update Account' : 'Create Account'}</h2>
+                    <p className="modal__subtitle">Account code is assigned by the server and is handled by the backend.</p>
                   </div>
-                </label>
-                {viewingAccount.payment_method_type && (
-                  <label className="form-field form-field--full">
-                    <span className="form-field__label">Payment details</span>
-                    <input value={`${viewingAccount.payment_method_type}${viewingAccount.provider_name ? ` · ${viewingAccount.provider_name}` : ''}${viewingAccount.account_number ? ` · ${viewingAccount.account_number}` : ''}`} readOnly />
-                  </label>
-                )}
-                <label className="form-field"><span className="form-field__label">Current balance</span><input value={viewingAccount.balance != null ? formatMoneyGhs(Number(viewingAccount.balance) || 0) : '—'} readOnly /></label>
+                  <button type="button" aria-label="Close dialog" className="modal__close" onClick={() => setShowModal(false)}>×</button>
+                </div>
+                <form onSubmit={(event) => void handleSubmit(event)}>
+                  <div className="modal__body">
+                    {formError && <div className="exec-dash__state-card exec-dash__state-card--error exec-dash__state-card--inline"><h2 className="exec-dash__state-title">Error</h2><p className="exec-dash__state-message">{formError}</p></div>}
+                    <p className="exec-dash__mock-note">Account code is assigned by the server and is not entered here.</p>
+                    <label>
+                      Name
+                      <input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} required style={{ display: 'block', width: '100%', marginTop: '0.25rem', marginBottom: '0.75rem' }} />
+                    </label>
+                    <label>
+                      Type
+                      <select value={form.type} onChange={(event) => setForm((current) => ({ ...current, type: event.target.value }))} style={{ display: 'block', width: '100%', marginTop: '0.25rem', marginBottom: '0.75rem' }}>
+                        <option value="Asset">Asset</option>
+                        <option value="Contra-Asset">Contra-Asset</option>
+                        <option value="Liability">Liability</option>
+                        <option value="Equity">Equity</option>
+                        <option value="Income">Income</option>
+                        <option value="Expense">Expense</option>
+                      </select>
+                    </label>
+                    <label>
+                      Reporting Group
+                      <input value={form.reporting_group} onChange={(event) => setForm((current) => ({ ...current, reporting_group: event.target.value }))} required style={{ display: 'block', width: '100%', marginTop: '0.25rem', marginBottom: '0.75rem' }} />
+                    </label>
+                    <label>
+                      Payment Method Type
+                      <input value={form.payment_method_type} onChange={(event) => setForm((current) => ({ ...current, payment_method_type: event.target.value }))} style={{ display: 'block', width: '100%', marginTop: '0.25rem', marginBottom: '0.75rem' }} />
+                    </label>
+                    <label>
+                      Account Number
+                      <input value={form.account_number} onChange={(event) => setForm((current) => ({ ...current, account_number: event.target.value }))} style={{ display: 'block', width: '100%', marginTop: '0.25rem', marginBottom: '0.75rem' }} />
+                    </label>
+                    <label>
+                      Provider Name
+                      <input value={form.provider_name} onChange={(event) => setForm((current) => ({ ...current, provider_name: event.target.value }))} style={{ display: 'block', width: '100%', marginTop: '0.25rem', marginBottom: '0.75rem' }} />
+                    </label>
+                  </div>
+                  <div className="modal__footer">
+                    <button type="button" className="button button--secondary" onClick={() => { setShowModal(false); setActiveId(null); setForm(emptyForm()) }}>Cancel</button>{' '}
+                    <button type="submit" className="button button--primary" disabled={submitting}>{submitting ? 'Saving…' : activeId ? 'Save Changes' : 'Create Account'}</button>
+                  </div>
+                </form>
               </div>
-            </div>
-            <div className="modal__footer">
-              <button type="button" className="button button--secondary" onClick={() => setViewingAccount(null)}>Close</button>
-              <button
-                type="button"
-                className="button button--primary"
-                onClick={() => {
-                  const a = viewingAccount
-                  setActiveId(a.account_id ?? a.id ?? null)
-                  setForm({
-                    name: a.name ?? '',
-                    type: a.type ?? 'Asset',
-                    reporting_group: a.reporting_group ?? '',
-                    payment_method_type: a.payment_method_type ?? '',
-                    account_number: a.account_number ?? '',
-                    provider_name: a.provider_name ?? '',
-                    account_code: a.code ?? '',
-                  })
-                  setViewingAccount(null)
-                  setShowModal(true)
-                }}
-              >
-                Edit account
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <ConfirmDialog
-        open={!!deactivateTarget}
-        onClose={() => setDeactivateTarget(null)}
-        onConfirm={(reason) => void handleDeactivateConfirm(reason)}
-        tone="danger"
-        iconGlyph="⚠"
-        title="Deactivate this account?"
-        description={`Deactivating “${deactivateTarget?.name ?? ''}” marks the ledger account as inactive. It will no longer appear as a postable option but remains available for historical reporting.`}
-        requireReason
-        reasonLabel="Reason for deactivation (required)"
-        reasonPlaceholder="e.g. Bank account closed, payment method no longer in use…"
-        confirmLabel="Deactivate account"
-        cancelLabel="Keep account"
-        confirmingLabel="Deactivating…"
-      />
+              </div>
+            )}
+        </section>
     </article>
   )
 }

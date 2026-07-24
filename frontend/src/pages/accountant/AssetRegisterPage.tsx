@@ -1,21 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { formatMoneyGhs } from '../../lib/formatMoney'
 import { supabase } from '../../lib/supabase'
+import { unwrapRpcResponse } from '../../lib/common'
+import { Modal } from '../../components/Modal'
+import { FormErrorBanner } from '../../components/FormErrorBanner'
 import '../../styles/executive-dashboard.css'
-
-/**
- * Helper to unwrap RPC envelope and extract real errors from business-logic failures.
- */
-function unwrapRpcResponse<T>(data: unknown): { ok: boolean; value: T | null; error: string | null } {
-  const envelope = data as { success?: boolean; data: T; error?: { code: string; message: string } | null } | null
-  if (!envelope) {
-    return { ok: false, value: null, error: 'No response from server' }
-  }
-  if (envelope.success === false) {
-    return { ok: false, value: null, error: envelope.error?.message ?? 'Unknown error' }
-  }
-  return { ok: true, value: envelope.data, error: null }
-}
 
 interface AssetRecord {
   asset_id?: string
@@ -301,7 +290,7 @@ export function AssetRegisterPage() {
 
         {statusMessage && <div className="exec-dash__state-card" style={{ marginBottom: '1rem' }}><h2 className="exec-dash__state-title">RPC response</h2><p className="exec-dash__state-message">{statusMessage}</p></div>}
 
-        {formError && <div className="exec-dash__state-card exec-dash__state-card--error" style={{ marginBottom: '1rem' }}><h2 className="exec-dash__state-title">Form error</h2><p className="exec-dash__state-message">{formError}</p></div>}
+        {!showCreateModal && !showDisposeModal && formError && <div className="exec-dash__state-card exec-dash__state-card--error" style={{ marginBottom: '1rem' }}><h2 className="exec-dash__state-title">Form error</h2><p className="exec-dash__state-message">{formError}</p></div>}
 
         {!assets.length ? (
           <div className="exec-dash__state-card exec-dash__state-card--empty"><h2 className="exec-dash__state-title">No assets found</h2><p className="exec-dash__state-message">No fixed assets are currently available through the generic assets resource.</p></div>
@@ -339,136 +328,134 @@ export function AssetRegisterPage() {
         )}
       </section>
 
-      {showCreateModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(10, 14, 26, 0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', zIndex: 1000 }}>
-          <div style={{ width: '100%', maxWidth: 640, background: 'var(--surface)', borderRadius: 16, padding: '1rem', boxShadow: '0 20px 45px rgba(0,0,0,0.35)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-              <h2 style={{ margin: 0 }}>Acquire asset</h2>
-              <button type="button" className="button button--secondary" onClick={() => setShowCreateModal(false)}>Close</button>
-            </div>
-            <form onSubmit={(event) => void handleCreateAsset(event)}>
-              {formError && <div style={{ background: 'rgba(255, 64, 64, 0.1)', border: '1px solid #ff4040', color: '#ff4040', padding: '0.75rem', borderRadius: '8px', marginBottom: '1rem' }}><strong>Error:</strong> {formError}</div>}
-              <label>
-                Name
-                <input value={assetForm.name} onChange={(event) => setAssetForm((current) => ({ ...current, name: event.target.value }))} required style={{ display: 'block', width: '100%', marginTop: '0.25rem', marginBottom: '0.75rem' }} />
-              </label>
-              <label>
-                Category
-                <input value={assetForm.category} onChange={(event) => setAssetForm((current) => ({ ...current, category: event.target.value }))} required style={{ display: 'block', width: '100%', marginTop: '0.25rem', marginBottom: '0.75rem' }} />
-              </label>
-              <label>
-                Cost
-                <input type="number" value={assetForm.cost} onChange={(event) => setAssetForm((current) => ({ ...current, cost: event.target.value }))} required style={{ display: 'block', width: '100%', marginTop: '0.25rem', marginBottom: '0.75rem' }} />
-              </label>
-              <label>
-                Useful life years
-                <input type="number" value={assetForm.useful_life_years} onChange={(event) => setAssetForm((current) => ({ ...current, useful_life_years: event.target.value }))} required style={{ display: 'block', width: '100%', marginTop: '0.25rem', marginBottom: '0.75rem' }} />
-              </label>
-              <label>
-                Acquisition date
-                <input type="date" value={assetForm.acquisition_date} onChange={(event) => setAssetForm((current) => ({ ...current, acquisition_date: event.target.value }))} required style={{ display: 'block', width: '100%', marginTop: '0.25rem', marginBottom: '0.75rem' }} />
-              </label>
-              <label>
-                Depreciation method
-                <input value={assetForm.depreciation_method} onChange={(event) => setAssetForm((current) => ({ ...current, depreciation_method: event.target.value }))} style={{ display: 'block', width: '100%', marginTop: '0.25rem', marginBottom: '0.75rem' }} />
-              </label>
-              <label>
-                Asset account (Asset)
-                <select value={assetForm.coa_asset_account} onChange={(event) => setAssetForm((current) => ({ ...current, coa_asset_account: event.target.value }))} required style={{ display: 'block', width: '100%', marginTop: '0.25rem', marginBottom: '0.75rem' }}>
-                  <option value="">Select asset account</option>
-                  {assetAccounts.map((account) => (
-                    <option key={account.account_id ?? account.id ?? account.name} value={account.account_id ?? account.id ?? ''}>
-                      {account.name ?? 'Unnamed account'} ({account.code ?? '—'})
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Accumulated depreciation account (Contra-Asset)
-                <select value={assetForm.coa_accum_dep_account} onChange={(event) => setAssetForm((current) => ({ ...current, coa_accum_dep_account: event.target.value }))} required style={{ display: 'block', width: '100%', marginTop: '0.25rem', marginBottom: '0.75rem' }}>
-                  <option value="">Select accumulated depreciation account</option>
-                  {contraAssetAccounts.map((account) => (
-                    <option key={account.account_id ?? account.id ?? account.name} value={account.account_id ?? account.id ?? ''}>
-                      {account.name ?? 'Unnamed account'} ({account.code ?? '—'})
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Settlement method
-                <select value={assetForm.settlement_method} onChange={(event) => setAssetForm((current) => ({ ...current, settlement_method: event.target.value as 'credit' | 'bank' | '' }))} style={{ display: 'block', width: '100%', marginTop: '0.25rem', marginBottom: '0.75rem' }}>
-                  <option value="credit">On credit (Accounts Payable)</option>
-                  <option value="bank">Paid now (Bank/MoMo/Cash)</option>
-                </select>
-              </label>
-              {assetForm.settlement_method === 'bank' && (
-                <label>
-                  Settlement account
-                  <select value={assetForm.settlement_account_id} onChange={(event) => setAssetForm((current) => ({ ...current, settlement_account_id: event.target.value }))} required style={{ display: 'block', width: '100%', marginTop: '0.25rem', marginBottom: '0.75rem' }}>
-                    <option value="">Select settlement account</option>
-                    {settlementAccounts.map((account) => (
-                      <option key={account.account_id ?? account.id ?? account.name} value={account.account_id ?? account.id ?? ''}>
-                        {account.name ?? 'Unnamed account'} ({account.payment_method_type ?? 'Unknown'})
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              )}
-              <label>
-                Status
-                <select value={assetForm.status} onChange={(event) => setAssetForm((current) => ({ ...current, status: event.target.value }))} style={{ display: 'block', width: '100%', marginTop: '0.25rem', marginBottom: '0.75rem' }}>
-                  <option value="Active">Active</option>
-                  <option value="Disposed">Disposed</option>
-                </select>
-              </label>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
-                <button type="button" className="button button--secondary" onClick={() => setShowCreateModal(false)}>Cancel</button>
-                <button type="submit" className="button button--primary" disabled={submitting}>{submitting ? 'Saving…' : 'Create asset'}</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <Modal
+        open={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        title="Acquire asset"
+        maxWidth={640}
+        footer={
+          <>
+            <button type="button" className="button button--secondary" onClick={() => setShowCreateModal(false)}>Cancel</button>
+            <button type="submit" form="asset-create-form" className="button button--primary" disabled={submitting}>{submitting ? 'Saving…' : 'Create asset'}</button>
+          </>
+        }
+      >
+        <form id="asset-create-form" onSubmit={(event) => void handleCreateAsset(event)}>
+          <FormErrorBanner message={formError} />
+          <label>
+            Name
+            <input value={assetForm.name} onChange={(event) => setAssetForm((current) => ({ ...current, name: event.target.value }))} required style={{ display: 'block', width: '100%', marginTop: '0.25rem', marginBottom: '0.75rem' }} />
+          </label>
+          <label>
+            Category
+            <input value={assetForm.category} onChange={(event) => setAssetForm((current) => ({ ...current, category: event.target.value }))} required style={{ display: 'block', width: '100%', marginTop: '0.25rem', marginBottom: '0.75rem' }} />
+          </label>
+          <label>
+            Cost
+            <input type="number" value={assetForm.cost} onChange={(event) => setAssetForm((current) => ({ ...current, cost: event.target.value }))} required style={{ display: 'block', width: '100%', marginTop: '0.25rem', marginBottom: '0.75rem' }} />
+          </label>
+          <label>
+            Useful life years
+            <input type="number" value={assetForm.useful_life_years} onChange={(event) => setAssetForm((current) => ({ ...current, useful_life_years: event.target.value }))} required style={{ display: 'block', width: '100%', marginTop: '0.25rem', marginBottom: '0.75rem' }} />
+          </label>
+          <label>
+            Acquisition date
+            <input type="date" value={assetForm.acquisition_date} onChange={(event) => setAssetForm((current) => ({ ...current, acquisition_date: event.target.value }))} required style={{ display: 'block', width: '100%', marginTop: '0.25rem', marginBottom: '0.75rem' }} />
+          </label>
+          <label>
+            Depreciation method
+            <input value={assetForm.depreciation_method} onChange={(event) => setAssetForm((current) => ({ ...current, depreciation_method: event.target.value }))} style={{ display: 'block', width: '100%', marginTop: '0.25rem', marginBottom: '0.75rem' }} />
+          </label>
+          <label>
+            Asset account (Asset)
+            <select value={assetForm.coa_asset_account} onChange={(event) => setAssetForm((current) => ({ ...current, coa_asset_account: event.target.value }))} required style={{ display: 'block', width: '100%', marginTop: '0.25rem', marginBottom: '0.75rem' }}>
+              <option value="">Select asset account</option>
+              {assetAccounts.map((account) => (
+                <option key={account.account_id ?? account.id ?? account.name} value={account.account_id ?? account.id ?? ''}>
+                  {account.name ?? 'Unnamed account'} ({account.code ?? '—'})
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Accumulated depreciation account (Contra-Asset)
+            <select value={assetForm.coa_accum_dep_account} onChange={(event) => setAssetForm((current) => ({ ...current, coa_accum_dep_account: event.target.value }))} required style={{ display: 'block', width: '100%', marginTop: '0.25rem', marginBottom: '0.75rem' }}>
+              <option value="">Select accumulated depreciation account</option>
+              {contraAssetAccounts.map((account) => (
+                <option key={account.account_id ?? account.id ?? account.name} value={account.account_id ?? account.id ?? ''}>
+                  {account.name ?? 'Unnamed account'} ({account.code ?? '—'})
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Settlement method
+            <select value={assetForm.settlement_method} onChange={(event) => setAssetForm((current) => ({ ...current, settlement_method: event.target.value as 'credit' | 'bank' | '' }))} style={{ display: 'block', width: '100%', marginTop: '0.25rem', marginBottom: '0.75rem' }}>
+              <option value="credit">On credit (Accounts Payable)</option>
+              <option value="bank">Paid now (Bank/MoMo/Cash)</option>
+            </select>
+          </label>
+          {assetForm.settlement_method === 'bank' && (
+            <label>
+              Settlement account
+              <select value={assetForm.settlement_account_id} onChange={(event) => setAssetForm((current) => ({ ...current, settlement_account_id: event.target.value }))} required style={{ display: 'block', width: '100%', marginTop: '0.25rem', marginBottom: '0.75rem' }}>
+                <option value="">Select settlement account</option>
+                {settlementAccounts.map((account) => (
+                  <option key={account.account_id ?? account.id ?? account.name} value={account.account_id ?? account.id ?? ''}>
+                    {account.name ?? 'Unnamed account'} ({account.payment_method_type ?? 'Unknown'})
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+          <label>
+            Status
+            <select value={assetForm.status} onChange={(event) => setAssetForm((current) => ({ ...current, status: event.target.value }))} style={{ display: 'block', width: '100%', marginTop: '0.25rem', marginBottom: '0.75rem' }}>
+              <option value="Active">Active</option>
+              <option value="Disposed">Disposed</option>
+            </select>
+          </label>
+        </form>
+      </Modal>
 
-      {showDisposeModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(10, 14, 26, 0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', zIndex: 1000 }}>
-          <div style={{ width: '100%', maxWidth: 460, background: 'var(--surface)', borderRadius: 16, padding: '1rem', boxShadow: '0 20px 45px rgba(0,0,0,0.35)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-              <h2 style={{ margin: 0 }}>Dispose asset</h2>
-              <button type="button" className="button button--secondary" onClick={() => setShowDisposeModal(false)}>Close</button>
-            </div>
-            <form onSubmit={(event) => void handleDisposeAsset(event)}>
-              {formError && <div style={{ background: 'rgba(255, 64, 64, 0.1)', border: '1px solid #ff4040', color: '#ff4040', padding: '0.75rem', borderRadius: '8px', marginBottom: '1rem' }}><strong>Error:</strong> {formError}</div>}
-              <p style={{ marginTop: 0, marginBottom: '0.75rem' }}><strong>Asset:</strong> {disposeAssetName}</p>
-              <label>
-                Disposal proceeds
-                <input type="number" value={disposeProceeds} onChange={(event) => setDisposeProceeds(event.target.value)} min="0" style={{ display: 'block', width: '100%', marginTop: '0.25rem', marginBottom: '0.75rem' }} />
-              </label>
-              <label>
-                Disposal date
-                <input type="date" value={disposeDate} onChange={(event) => setDisposeDate(event.target.value)} style={{ display: 'block', width: '100%', marginTop: '0.25rem', marginBottom: '0.75rem' }} />
-              </label>
-              {requiresSettlementAccount && (
-                <label>
-                  Settlement account
-                  <select value={disposeSettlementAccountId} onChange={(event) => setDisposeSettlementAccountId(event.target.value)} required style={{ display: 'block', width: '100%', marginTop: '0.25rem', marginBottom: '0.75rem' }}>
-                    <option value="">Select settlement account</option>
-                    {settlementAccounts.map((account) => (
-                      <option key={account.account_id ?? account.id ?? account.name} value={account.account_id ?? account.id ?? ''}>
-                        {account.name ?? 'Unnamed account'} ({account.payment_method_type ?? 'Unknown'})
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              )}
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
-                <button type="button" className="button button--secondary" onClick={() => setShowDisposeModal(false)}>Cancel</button>
-                <button type="submit" className="button button--primary" disabled={submitting}>{submitting ? 'Disposing…' : 'Dispose asset'}</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <Modal
+        open={showDisposeModal}
+        onClose={() => setShowDisposeModal(false)}
+        title="Dispose asset"
+        maxWidth={460}
+        footer={
+          <>
+            <button type="button" className="button button--secondary" onClick={() => setShowDisposeModal(false)}>Cancel</button>
+            <button type="submit" form="asset-dispose-form" className="button button--primary" disabled={submitting}>{submitting ? 'Disposing…' : 'Dispose asset'}</button>
+          </>
+        }
+      >
+        <form id="asset-dispose-form" onSubmit={(event) => void handleDisposeAsset(event)}>
+          <FormErrorBanner message={formError} />
+          <p style={{ marginTop: 0, marginBottom: '0.75rem' }}><strong>Asset:</strong> {disposeAssetName}</p>
+          <label>
+            Disposal proceeds
+            <input type="number" value={disposeProceeds} onChange={(event) => setDisposeProceeds(event.target.value)} min="0" style={{ display: 'block', width: '100%', marginTop: '0.25rem', marginBottom: '0.75rem' }} />
+          </label>
+          <label>
+            Disposal date
+            <input type="date" value={disposeDate} onChange={(event) => setDisposeDate(event.target.value)} style={{ display: 'block', width: '100%', marginTop: '0.25rem', marginBottom: '0.75rem' }} />
+          </label>
+          {requiresSettlementAccount && (
+            <label>
+              Settlement account
+              <select value={disposeSettlementAccountId} onChange={(event) => setDisposeSettlementAccountId(event.target.value)} required style={{ display: 'block', width: '100%', marginTop: '0.25rem', marginBottom: '0.75rem' }}>
+                <option value="">Select settlement account</option>
+                {settlementAccounts.map((account) => (
+                  <option key={account.account_id ?? account.id ?? account.name} value={account.account_id ?? account.id ?? ''}>
+                    {account.name ?? 'Unnamed account'} ({account.payment_method_type ?? 'Unknown'})
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+        </form>
+      </Modal>
     </article>
   )
 }

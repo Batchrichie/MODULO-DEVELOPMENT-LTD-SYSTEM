@@ -5,10 +5,11 @@ import '../../styles/executive-dashboard.css'
 interface Project {
   project_id?: string
   id?: string
-  project_name?: string | null
+  name?: string | null
+  customer_id?: string | null
+  contract_value?: number | null
   expected_completion?: string | null
-  total_budget?: number | null
-  total_actual?: number | null
+  status?: string | null
 }
 
 export function MyProjectsPage() {
@@ -104,20 +105,18 @@ export function MyProjectsPage() {
             <thead>
               <tr>
                 <th style={{ textAlign: 'left', padding: '0.5rem' }}>Project</th>
+                <th style={{ textAlign: 'left', padding: '0.5rem' }}>Contract Value</th>
                 <th style={{ textAlign: 'left', padding: '0.5rem' }}>Expected Completion</th>
-                <th style={{ textAlign: 'right', padding: '0.5rem' }}>Budget</th>
-                <th style={{ textAlign: 'right', padding: '0.5rem' }}>Actual</th>
-                <th style={{ textAlign: 'right', padding: '0.5rem' }}>Variance</th>
+                <th style={{ textAlign: 'left', padding: '0.5rem' }}>Status</th>
               </tr>
             </thead>
             <tbody>
               {projects.map((p) => (
                 <tr key={p.project_id ?? p.id}>
-                  <td style={{ padding: '0.5rem' }}>{p.project_name ?? '—'}</td>
+                  <td style={{ padding: '0.5rem' }}>{p.name ?? '—'}</td>
+                  <td style={{ padding: '0.5rem' }}>{typeof p.contract_value === 'number' ? p.contract_value.toFixed(2) : '—'}</td>
                   <td style={{ padding: '0.5rem' }}>{p.expected_completion ?? '—'}</td>
-                  <td style={{ textAlign: 'right', padding: '0.5rem' }}>{typeof p.total_budget === 'number' ? p.total_budget.toFixed(2) : '—'}</td>
-                  <td style={{ textAlign: 'right', padding: '0.5rem' }}>{typeof p.total_actual === 'number' ? p.total_actual.toFixed(2) : '—'}</td>
-                  <td style={{ textAlign: 'right', padding: '0.5rem' }}>{typeof p.total_budget === 'number' && typeof p.total_actual === 'number' ? (p.total_budget - p.total_actual).toFixed(2) : '—'}</td>
+                  <td style={{ padding: '0.5rem' }}>{p.status ?? '—'}</td>
                 </tr>
               ))}
             </tbody>

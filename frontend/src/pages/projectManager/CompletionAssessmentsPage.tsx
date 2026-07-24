@@ -1,18 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
-import { getRecords } from '../../lib/rpc/accountant'
+import { getRecords, completionAssessmentSubmit } from '../../lib/rpc/accountant'
 import { EmptyState } from '../../components/EmptyState'
-import { PendingBackendNotice } from '../../components/PendingBackendNotice'
 import { SearchField } from '../../components/SearchField'
 import '../../styles/executive-dashboard.css'
 
 interface Project {
   project_id?: string
   id?: string
-  project_name?: string | null
+  name?: string | null
 }
-
-const ASSESSMENT_DISABLED_REASON =
-  'Project site-report submission is disabled until the backend completion_assessment_submit RPC is verified and deployed. Buttons above are intentionally disabled.'
 
 export function CompletionAssessmentsPage() {
   const [projects, setProjects] = useState<Project[]>([])
@@ -20,6 +16,7 @@ export function CompletionAssessmentsPage() {
   const [error, setError] = useState<string | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [statusMessage, setStatusMessage] = useState<string | null>(null)
   const [showModal, setShowModal] = useState(false)
   const [selectedProject, setSelectedProject] = useState<string>('')
   const [period, setPeriod] = useState(new Date().toISOString().slice(0, 7))
@@ -62,14 +59,47 @@ export function CompletionAssessmentsPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setSubmitting(true)
-    setFormError('Assessment submission is disabled pending backend RPC deployment.')
+    setFormError(null)
+
+    if (!selectedProject) {
+      setFormError('Select a project first.')
+      setSubmitting(false)
+      return
+    }
+    if (!period) {
+      setFormError('Period is required (YYYY-MM).')
+      setSubmitting(false)
+      return
+    }
+    const pct = Number(percent)
+    if (Number.isNaN(pct) || pct < 0 || pct > 100) {
+      setFormError('Percent complete must be between 0 and 100.')
+      setSubmitting(false)
+      return
+    }
+
+    const res = await completionAssessmentSubmit(selectedProject, period, pct)
+    if (res.ok) {
+      // show success and clear percent
+      setFormError(null)
+      setPercent('')
+      setShowModal(false)
+      setStatusMessage(`Submitted: ${res.data.status ?? 'Submitted'} (${res.data.period ?? period}) — ${res.data.percent_complete ?? pct}%`)
+      // refresh projects if needed
+      await loadProjects()
+    } else {
+      // Surface validation errors verbatim; callRpc provides envelope.error.message
+      setFormError(res.error)
+      setStatusMessage(null)
+    }
+
     setSubmitting(false)
   }
 
   const filteredProjects = useMemo(() => {
     const q = searchQuery.trim().toLowerCase()
     if (!q) return projects
-    return projects.filter((p) => (p.project_name ?? '').toLowerCase().includes(q))
+    return projects.filter((p) => (p.name ?? '').toLowerCase().includes(q))
   }, [projects, searchQuery])
 
   if (loading) {
@@ -122,24 +152,18 @@ export function CompletionAssessmentsPage() {
             <button
               type="button"
               className="button button--primary"
-              disabled
-              title="New Assessment — pending backend completion_assessment_submit RPC"
-              onClick={() => setShowModal(true)}
+              onClick={() => { setStatusMessage(null); setFormError(null); setShowModal(true) }}
             >
               New Assessment
             </button>
           </div>
         </div>
 
-        <PendingBackendNotice
-          inline
-          title="Site-report submission disabled"
-          description={ASSESSMENT_DISABLED_REASON}
-        />
+        {/* backend RPC is available; submission enabled */}
 
         <div className="exec-dash__row">
-          <div className="exec-dash__panel">
-            <div className="registry-toolbar">
+            <div className="exec-dash__panel">
+              <div className="registry-toolbar">
               <div className="registry-toolbar__search-row">
                 <SearchField value={searchQuery} onChange={setSearchQuery} placeholder="Search projects by name…" />
               </div>
@@ -173,15 +197,15 @@ export function CompletionAssessmentsPage() {
                     {filteredProjects.map((p) => (
                       <tr key={p.project_id ?? p.id}>
                         <td>
-                          <strong style={{ display: 'block' }}>{p.project_name ?? '—'}</strong>
+                          <strong style={{ display: 'block' }}>{p.name ?? '—'}</strong>
                         </td>
                         <td>
                           <div className="data-table__actions">
                             <button
                               className="button button--secondary"
-                              disabled
-                              title="Submit assessment — pending backend completion_assessment_submit RPC"
                               onClick={() => {
+                                setStatusMessage(null)
+                                setFormError(null)
                                 setSelectedProject(p.project_id ?? p.id ?? '')
                                 setShowModal(true)
                               }}
@@ -221,12 +245,8 @@ export function CompletionAssessmentsPage() {
             </div>
             <form onSubmit={(e) => void handleSubmit(e)}>
               <div className="modal__body">
-                <PendingBackendNotice
-                  inline
-                  title="Submission disabled"
-                  description="This form is read-only until the completion_assessment_submit backend RPC is deployed and verified."
-                />
                 {formError && <div className="exec-dash__state-card exec-dash__state-card--error exec-dash__state-card--inline"><h2 className="exec-dash__state-title">Error</h2><p className="exec-dash__state-message">{formError}</p></div>}
+                {statusMessage && <div className="exec-dash__state-card" style={{ marginBottom: '1rem' }}><h2 className="exec-dash__state-title">Success</h2><p className="exec-dash__state-message">{statusMessage}</p></div>}
                 <div className="form-grid">
                   <label className="form-field form-field--full">
                     <span className="form-field__label">Project</span>
@@ -234,17 +254,17 @@ export function CompletionAssessmentsPage() {
                       value={selectedProject}
                       onChange={(e) => setSelectedProject(e.target.value)}
                       required
-                      disabled
+                      
                     >
                       <option value="">Select project</option>
                       {projects.map((p) => (
-                        <option key={p.project_id ?? p.id} value={p.project_id ?? p.id}>{p.project_name}</option>
+                        <option key={p.project_id ?? p.id} value={p.project_id ?? p.id}>{p.name}</option>
                       ))}
                     </select>
                   </label>
                   <label className="form-field">
                     <span className="form-field__label">Period</span>
-                    <input type="month" value={period} onChange={(e) => setPeriod(e.target.value)} required disabled />
+                    <input type="month" value={period} onChange={(e) => setPeriod(e.target.value)} required />
                   </label>
                   <label className="form-field">
                     <span className="form-field__label">Percent Complete</span>
@@ -256,14 +276,14 @@ export function CompletionAssessmentsPage() {
                       max="100"
                       step="0.01"
                       required
-                      disabled
+                      
                     />
                   </label>
                 </div>
               </div>
               <div className="modal__footer">
                 <button type="button" className="button button--secondary" onClick={() => setShowModal(false)}>Cancel</button>
-                <button type="submit" className="button button--primary" disabled={true}>
+                <button type="submit" className="button button--primary" disabled={submitting}>
                   {submitting ? 'Submitting…' : 'Submit Assessment'}
                 </button>
               </div>

@@ -1,21 +1,8 @@
 import { useEffect, useState } from 'react'
 import { formatMoneyGhs } from '../../lib/formatMoney'
 import { supabase } from '../../lib/supabase'
+import { unwrapRpcResponse } from '../../lib/common'
 import '../../styles/executive-dashboard.css'
-
-/**
- * Helper to unwrap RPC envelope and extract real errors from business-logic failures.
- */
-function unwrapRpcResponse<T>(data: unknown): { ok: boolean; value: T | null; error: string | null } {
-  const envelope = data as { success?: boolean; data: T; error?: { code: string; message: string } | null } | null
-  if (!envelope) {
-    return { ok: false, value: null, error: 'No response from server' }
-  }
-  if (envelope.success === false) {
-    return { ok: false, value: null, error: envelope.error?.message ?? 'Unknown error' }
-  }
-  return { ok: true, value: envelope.data, error: null }
-}
 
 interface DepreciationJournalRecord {
   journal_id?: string

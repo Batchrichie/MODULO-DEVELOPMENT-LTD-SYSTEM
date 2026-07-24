@@ -2,21 +2,8 @@ import { useEffect, useState } from 'react'
 import { formatMoneyGhs } from '../../lib/formatMoney'
 import { paymentMadeCreate } from '../../lib/rpc/accountant'
 import { supabase } from '../../lib/supabase'
+import { unwrapRpcResponse } from '../../lib/common'
 import '../../styles/executive-dashboard.css'
-
-/**
- * Helper to unwrap RPC envelope and extract real errors from business-logic failures.
- */
-function unwrapRpcResponse<T>(data: unknown): { ok: boolean; value: T | null; error: string | null } {
-  const envelope = data as { success?: boolean; data: T; error?: { code: string; message: string } | null } | null
-  if (!envelope) {
-    return { ok: false, value: null, error: 'No response from server' }
-  }
-  if (envelope.success === false) {
-    return { ok: false, value: null, error: envelope.error?.message ?? 'Unknown error' }
-  }
-  return { ok: true, value: envelope.data, error: null }
-}
 
 interface SupplierPaymentFormState {
   supplier_id: string
@@ -43,8 +30,11 @@ export function SupplierPaymentsPage() {
   const [settlementAccounts, setSettlementAccounts] = useState<SettlementAccountRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState<{ payment_id?: string; amount?: number } | null>(null)
+  const [_error, setError] = useState<string | null>(null)
+  const [formError, setFormError] = useState<string | null>(null)
+  const [statusMessage, setStatusMessage] = useState<string | null>(null)
+  const [showModal, setShowModal] = useState(false)
+  const [_success, setSuccess] = useState<{ payment_id?: string; amount?: number } | null>(null)
 
   useEffect(() => {
     void loadInitialData()
@@ -53,6 +43,8 @@ export function SupplierPaymentsPage() {
   async function loadInitialData() {
     setLoading(true)
     setError(null)
+    setFormError(null)
+    setStatusMessage(null)
 
     const [suppliersResult, settlementAccountsResult] = await Promise.all([
       supabase.schema('api').rpc('get_records', { p_resource: 'suppliers', p_page: 1, p_limit: 100 }),
@@ -85,28 +77,29 @@ export function SupplierPaymentsPage() {
     }
 
     setLoading(false)
+    // recent payments list removed (not part of this ticket)
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setSubmitting(true)
-    setError(null)
+    setFormError(null)
     setSuccess(null)
 
     if (!form.supplier_id) {
-      setError('Supplier is required')
+      setFormError('Supplier is required')
       setSubmitting(false)
       return
     }
 
     if (!form.settlement_account_id) {
-      setError('Settlement account is required')
+      setFormError('Settlement account is required')
       setSubmitting(false)
       return
     }
 
     if (!form.amount || Number(form.amount) <= 0) {
-      setError('Amount must be greater than 0')
+      setFormError('Amount must be greater than 0')
       setSubmitting(false)
       return
     }
@@ -124,8 +117,10 @@ export function SupplierPaymentsPage() {
         amount: result.data.amount ?? 0,
       })
       setForm(emptyForm())
+      setShowModal(false)
+      setStatusMessage(`Payment ${result.data.payment_id ?? ''} recorded — ${formatMoneyGhs(result.data.amount ?? 0)}`)
     } else {
-      setError(result.error)
+      setFormError(result.error)
     }
 
     setSubmitting(false)
@@ -168,86 +163,87 @@ export function SupplierPaymentsPage() {
 
         <div className="exec-dash__row">
           <div className="exec-dash__panel">
-            {error && <div className="exec-dash__state-card exec-dash__state-card--error exec-dash__state-card--inline">
-              <h2 className="exec-dash__state-title">Error</h2>
-              <p className="exec-dash__state-message">{error}</p>
-            </div>}
+            {formError && <div className="exec-dash__state-card exec-dash__state-card--error exec-dash__state-card--inline"><h2 className="exec-dash__state-title">Error</h2><p className="exec-dash__state-message">{formError}</p></div>}
 
-            {success && <div className="exec-dash__state-card exec-dash__state-card--success exec-dash__state-card--inline">
-              <h2 className="exec-dash__state-title">Payment recorded</h2>
-              <p className="exec-dash__state-message">
-                Payment ID: <strong>{success.payment_id}</strong>
-                <br />
-                Amount: <strong>{formatMoneyGhs(success.amount || 0)}</strong>
-              </p>
-            </div>}
+            {statusMessage && <div className="exec-dash__state-card exec-dash__state-card--success exec-dash__state-card--inline"><h2 className="exec-dash__state-title">Success</h2><p className="exec-dash__state-message">{statusMessage}</p></div>}
 
-            <form onSubmit={(event) => void handleSubmit(event)}>
-              <div className="form-grid">
-                <label className="form-field">
-                  <span className="form-field__label">Supplier *</span>
-                  <select
-                    value={form.supplier_id}
-                    onChange={(event) => setForm((current) => ({ ...current, supplier_id: event.target.value }))}
-                    required
-                  >
-                    <option value="">Select a supplier</option>
-                    {suppliers.map((supplier) => (
-                      <option key={supplier.supplier_id || supplier.id} value={supplier.supplier_id || supplier.id}>
-                        {supplier.name || supplier.supplier_name || '—'}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
-                <label className="form-field">
-                  <span className="form-field__label">Amount *</span>
-                  <input
-                    type="number"
-                    placeholder="0.00"
-                    value={form.amount}
-                    onChange={(event) => setForm((current) => ({ ...current, amount: event.target.value }))}
-                    step="0.01"
-                    min="0"
-                    required
-                  />
-                </label>
-
-                <label className="form-field form-field--full">
-                  <span className="form-field__label">Settlement account *</span>
-                  <select
-                    value={form.settlement_account_id}
-                    onChange={(event) => setForm((current) => ({ ...current, settlement_account_id: event.target.value }))}
-                    required
-                  >
-                    <option value="">Select settlement account</option>
-                    {settlementAccounts.map((account) => (
-                      <option key={account.account_id || account.id} value={account.account_id || account.id}>
-                        {account.name || 'Unnamed account'} ({account.payment_method_type || 'Unknown'})
-                      </option>
-                    ))}
-                  </select>
-                </label>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h3 style={{ margin: 0 }}>Supplier Payments</h3>
+              <div>
+                <button type="button" className="button button--secondary" onClick={() => void loadInitialData()}>Refresh</button>{' '}
+                <button type="button" className="button button--primary" onClick={() => { setForm(emptyForm()); setFormError(null); setShowModal(true) }}>Record Payment</button>
               </div>
+            </div>
+            <div className="exec-dash__state-card exec-dash__state-card--empty"><h2 className="exec-dash__state-title">Recent payments hidden</h2><p className="exec-dash__state-message">Recent payments list removed from this view.</p></div>
 
-              <div className="summary-box">
-                <div className="summary-box__row summary-box__row--total">
-                  <strong>Amount to pay:</strong>
-                  <span>{formatMoneyGhs(Number(form.amount) || 0)}</span>
+            {showModal && (
+              <div className="modal-overlay" onClick={(event) => { if (event.target !== event.currentTarget) return; setShowModal(false) }} role="dialog" aria-modal="true">
+                <div className="modal">
+                  <div className="modal__header">
+                    <div className="modal__header-text">
+                      <h2 className="modal__title">Record Supplier Payment</h2>
+                      <p className="modal__subtitle">Post a payment to a supplier and trigger automatic journal entries.</p>
+                    </div>
+                    <button type="button" aria-label="Close dialog" className="modal__close" onClick={() => setShowModal(false)}>×</button>
+                  </div>
+                  <form onSubmit={(event) => void handleSubmit(event)}>
+                    <div className="modal__body">
+                      {formError && <div className="exec-dash__state-card exec-dash__state-card--error exec-dash__state-card--inline"><h2 className="exec-dash__state-title">Error</h2><p className="exec-dash__state-message">{formError}</p></div>}
+                      <div className="form-grid">
+                        <label className="form-field">
+                          <span className="form-field__label">Supplier *</span>
+                          <select
+                            value={form.supplier_id}
+                            onChange={(event) => setForm((current) => ({ ...current, supplier_id: event.target.value }))}
+                            required
+                          >
+                            <option value="">Select a supplier</option>
+                            {suppliers.map((supplier) => (
+                              <option key={supplier.supplier_id || supplier.id} value={supplier.supplier_id || supplier.id}>
+                                {supplier.name || supplier.supplier_name || '—'}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+
+                        <label className="form-field">
+                          <span className="form-field__label">Amount *</span>
+                          <input
+                            type="number"
+                            placeholder="0.00"
+                            value={form.amount}
+                            onChange={(event) => setForm((current) => ({ ...current, amount: event.target.value }))}
+                            step="0.01"
+                            min="0"
+                            required
+                          />
+                        </label>
+
+                        <label className="form-field form-field--full">
+                          <span className="form-field__label">Settlement account *</span>
+                          <select
+                            value={form.settlement_account_id}
+                            onChange={(event) => setForm((current) => ({ ...current, settlement_account_id: event.target.value }))}
+                            required
+                          >
+                            <option value="">Select settlement account</option>
+                            {settlementAccounts.map((account) => (
+                              <option key={account.account_id || account.id} value={account.account_id || account.id}>
+                                {account.name || 'Unnamed account'} ({account.payment_method_type || 'Unknown'})
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      </div>
+                    </div>
+                    <div className="modal__footer">
+                      <button type="button" className="button button--secondary" onClick={() => setShowModal(false)}>Cancel</button>{' '}
+                      <button type="submit" className="button button--primary" disabled={submitting}>{submitting ? 'Recording Payment...' : 'Record Payment'}</button>
+                    </div>
+                  </form>
                 </div>
-                <div className="summary-box__note">Posted today.</div>
               </div>
-
-              <div className="form-actions">
-                <button
-                  type="submit"
-                  className="button button--primary"
-                  disabled={submitting}
-                >
-                  {submitting ? 'Recording Payment...' : 'Record Payment'}
-                </button>
-              </div>
-            </form>
+            )}
           </div>
         </div>
       </section>

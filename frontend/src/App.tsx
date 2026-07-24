@@ -24,6 +24,7 @@ import { TaxPage } from './pages/accountant/TaxPage'
 import { MyProjectsPage } from './pages/projectManager/MyProjectsPage'
 import { CompletionAssessmentsPage } from './pages/projectManager/CompletionAssessmentsPage'
 import { BudgetTrackingPage } from './pages/projectManager/BudgetTrackingPage'
+import { ProjectCostingPage } from './pages/projectManager/ProjectCostingPage'
 import { createPortalChildRoutes } from './routes/portalRoutes'
 
 function RootRedirect() {
@@ -100,6 +101,7 @@ function App() {
       >
         {createPortalChildRoutes(PORTAL_NAV.ProjectManager, {
           '/project-manager/my-projects': <MyProjectsPage />,
+          '/project-manager/project-costing': <ProjectCostingPage />,
           '/project-manager/completion-assessments': <CompletionAssessmentsPage />,
           '/project-manager/budget-tracking': <BudgetTrackingPage />,
         })}
