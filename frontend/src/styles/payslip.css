@@ -1,0 +1,162 @@
+.payslip-print-container {
+  display: none;
+}
+
+.payslip-letterhead {
+  background: #111;
+  color: #fff;
+  padding: 1rem 1.25rem;
+}
+
+.payslip-letterhead__brand {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.payslip-letterhead__logo {
+  width: 60px;
+  height: 60px;
+  object-fit: contain;
+  border-radius: 6px;
+  background: #fff;
+}
+
+.payslip-letterhead__logo-placeholder {
+  width: 60px;
+  height: 60px;
+  display: grid;
+  place-items: center;
+  background: #fff;
+  color: #111;
+  font-weight: 700;
+  border-radius: 6px;
+}
+
+.payslip-letterhead__company {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.payslip-letterhead__address {
+  font-size: 0.9rem;
+  opacity: 0.85;
+  line-height: 1.4;
+}
+
+.payslip-title {
+  text-align: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 1.5rem 0 1rem;
+}
+
+.payslip-info,
+.payslip-amounts {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1rem;
+}
+
+.payslip-info th,
+.payslip-info td,
+.payslip-amounts th,
+.payslip-amounts td {
+  padding: 0.85rem 1rem;
+  border: 1px solid #d1d5db;
+}
+
+.payslip-info th {
+  width: 160px;
+  background: #f3f4f6;
+  text-align: left;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.payslip-info td {
+  background: #fff;
+}
+
+.payslip-box {
+  border: 1px solid #d1d5db;
+  border-radius: 12px;
+  padding: 1rem;
+  margin-top: 1rem;
+  background: #fff;
+}
+
+.payslip-box-title {
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+}
+
+.payslip-amounts th {
+  background: #f9fafb;
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.payslip-amounts td {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.payslip-summary-row th,
+.payslip-summary-row td {
+  font-weight: 700;
+  border-top: 2px solid #111;
+}
+
+.payslip-net-box {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: #111;
+  color: #fff;
+  border-radius: 10px;
+  margin-top: 1rem;
+}
+
+.payslip-net-label {
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.payslip-net-value {
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  .payslip-print-container,
+  .payslip-print-container * {
+    visibility: visible;
+  }
+
+  .payslip-print-container {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    padding: 1rem;
+    background: #fff;
+  }
+
+  .payslip-print-sheet {
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .payslip-print-sheet * {
+    box-shadow: none !important;
+  }
+}

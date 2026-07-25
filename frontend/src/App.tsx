@@ -22,9 +22,14 @@ import { DepreciationJournalPage } from './pages/accountant/DepreciationJournalP
 import { RentalsPage } from './pages/accountant/RentalsPage'
 import { TaxPage } from './pages/accountant/TaxPage'
 import { MyProjectsPage } from './pages/projectManager/MyProjectsPage'
+import { PayslipsPage } from './pages/employee/PayslipsPage'
 import { CompletionAssessmentsPage } from './pages/projectManager/CompletionAssessmentsPage'
 import { BudgetTrackingPage } from './pages/projectManager/BudgetTrackingPage'
 import { ProjectCostingPage } from './pages/projectManager/ProjectCostingPage'
+import { AuditLogPage } from './pages/admin/AuditLogPage'
+import { RolesPermissionsPage } from './pages/admin/RolesPermissionsPage'
+import { SecurityMonitoringPage } from './pages/admin/SecurityMonitoringPage'
+import { UserManagementPage } from './pages/admin/UserManagementPage'
 import { createPortalChildRoutes } from './routes/portalRoutes'
 
 function RootRedirect() {
@@ -115,7 +120,9 @@ function App() {
           </RouteGuard>
         }
       >
-        {createPortalChildRoutes(PORTAL_NAV.Employee)}
+        {createPortalChildRoutes(PORTAL_NAV.Employee, {
+          '/employee/payslips': <PayslipsPage />,
+        })}
       </Route>
 
       <Route
@@ -126,7 +133,12 @@ function App() {
           </RouteGuard>
         }
       >
-        {createPortalChildRoutes(PORTAL_NAV.Admin)}
+        {createPortalChildRoutes(PORTAL_NAV.Admin, {
+          '/admin/user-management': <UserManagementPage />,
+          '/admin/roles-permissions': <RolesPermissionsPage />,
+          '/admin/audit-log': <AuditLogPage />,
+          '/admin/security-monitoring': <SecurityMonitoringPage />,
+        })}
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

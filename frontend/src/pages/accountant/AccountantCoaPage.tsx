@@ -1,7 +1,22 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { formatMoneyGhs } from '../../lib/formatMoney'
-import { createAccount, deactivateAccount, fetchAccounts, updateAccount } from '../../lib/rpc/accountant'
+import {
+  createAccount,
+  deactivateAccount,
+  fetchAccounts,
+  fetchCoaReference,
+  updateAccount,
+  type CoaReferenceData,
+} from '../../lib/rpc/accountant'
 import '../../styles/executive-dashboard.css'
+
+const PAYMENT_METHOD_NONE_SENTINEL = '__none__'
+
+const PAYMENT_METHOD_DISPLAY: Record<string, string> = {
+  Cash: 'Cash',
+  Bank: 'Bank',
+  MoMo: 'Mobile Money',
+}
 
 interface CoaFormState {
   code: string
@@ -13,15 +28,17 @@ interface CoaFormState {
   provider_name: string
 }
 
-const emptyForm = (): CoaFormState => ({
-  code: '',
-  name: '',
-  type: 'Asset',
-  reporting_group: '',
-  payment_method_type: 'not-a-payment-account',
-  account_number: '',
-  provider_name: '',
-})
+function emptyForm(defaultType: string): CoaFormState {
+  return {
+    code: '',
+    name: '',
+    type: defaultType,
+    reporting_group: '',
+    payment_method_type: PAYMENT_METHOD_NONE_SENTINEL,
+    account_number: '',
+    provider_name: '',
+  }
+}
 
 function MetricCard({ label, value, tone, icon }: { label: string; value: string; tone: string; icon: string }) {
   return (
@@ -55,13 +72,20 @@ export function AccountantCoaPage() {
   const [accounts, setAccounts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [form, setForm] = useState<CoaFormState>(emptyForm())
+  const [form, setForm] = useState<CoaFormState>(emptyForm('Asset'))
   const [submitting, setSubmitting] = useState(false)
   const [activeId, setActiveId] = useState<string | null>(null)
   const [showModal, _setShowModal] = useState(false)
   const triggerBtnRef = useRef<HTMLButtonElement | null>(null)
   const modalOpenedAtRef = useRef<number>(0)
   const [popoverStyle, setPopoverStyle] = useState<{ left: number; top: number; maxWidth: number }>({ left: 24, top: 140, maxWidth: 960 })
+  const [refLoading, setRefLoading] = useState(true)
+  const [, setRefError] = useState<string | null>(null)
+  const [coaRef, setCoaRef] = useState<CoaReferenceData>({
+    reporting_groups: [],
+    account_types: ['Asset', 'Contra-Asset', 'Liability', 'Equity', 'Income', 'Expense'],
+    payment_methods: ['Cash', 'Bank', 'MoMo'],
+  })
   function setShowModal(next: boolean) {
     if (next) {
       modalOpenedAtRef.current = performance.now()
@@ -81,7 +105,23 @@ export function AccountantCoaPage() {
 
   useEffect(() => {
     void loadAccounts()
+    void loadCoaReference()
   }, [])
+
+  async function loadCoaReference() {
+    setRefLoading(true)
+    setRefError(null)
+    const result = await fetchCoaReference()
+    if (result.ok) {
+      setCoaRef(result.data)
+      if (!form.type && result.data.account_types.length > 0) {
+        setForm((current) => ({ ...current, type: result.data.account_types[0] ?? 'Asset' }))
+      }
+    } else {
+      setRefError(result.error)
+    }
+    setRefLoading(false)
+  }
 
   async function loadAccounts() {
     setLoading(true)
@@ -107,14 +147,14 @@ export function AccountantCoaPage() {
       name: form.name,
       type: form.type,
       reporting_group: form.reporting_group,
-      ...(form.payment_method_type && form.payment_method_type !== 'not-a-payment-account' ? { payment_method_type: form.payment_method_type } : {}),
+      ...(form.payment_method_type && form.payment_method_type !== PAYMENT_METHOD_NONE_SENTINEL ? { payment_method_type: form.payment_method_type } : {}),
       ...(form.account_number ? { account_number: form.account_number } : {}),
       ...(form.provider_name ? { provider_name: form.provider_name } : {}),
     }
 
     const result = activeId ? await updateAccount(activeId, payload) : await createAccount(payload)
     if (result.ok) {
-      setForm(emptyForm())
+      setForm(emptyForm(coaRef.account_types[0] ?? 'Asset'))
       setActiveId(null)
       await loadAccounts()
       setShowModal(false)
@@ -134,6 +174,16 @@ export function AccountantCoaPage() {
       setError(result.error)
     }
   }
+
+  const selectedRange = useMemo(() => {
+    if (!form.reporting_group) return null
+    return coaRef.reporting_groups.find((r) => r.reporting_group === form.reporting_group) ?? null
+  }, [form.reporting_group, coaRef.reporting_groups])
+
+  const suggestedCodePlaceholder = useMemo(() => {
+    if (selectedRange) return `e.g. ${selectedRange.range_start} (${selectedRange.range_start}-${selectedRange.range_end})`
+    return 'e.g. 1130'
+  }, [selectedRange])
 
   const totalBalance = useMemo(() => accounts.reduce((sum, account) => sum + (Number(account.balance ?? 0) || 0), 0), [accounts])
 
@@ -174,7 +224,7 @@ export function AccountantCoaPage() {
                   <td style={{ padding: '0.5rem' }}>{account.reporting_group ?? '—'}</td>
                   <td style={{ padding: '0.5rem' }}>{account.is_postable === false ? 'Inactive' : 'Active'}</td>
                   <td style={{ padding: '0.5rem' }}>
-                    <button type="button" className="button button--secondary" onClick={() => { setActiveId(account.account_id ?? account.id ?? null); setForm({ code: account.code ?? '', name: account.name ?? '', type: account.type ?? 'Asset', reporting_group: account.reporting_group ?? '', payment_method_type: account.payment_method_type ?? 'not-a-payment-account', account_number: account.account_number ?? '', provider_name: account.provider_name ?? '' }); setFormError(null); setShowModal(true); }}>Edit</button>{' '}
+                    <button type="button" className="button button--secondary" onClick={() => { setActiveId(account.account_id ?? account.id ?? null); setForm({ code: account.code ?? '', name: account.name ?? '', type: account.type ?? (coaRef.account_types[0] ?? 'Asset'), reporting_group: account.reporting_group ?? '', payment_method_type: account.payment_method_type ?? PAYMENT_METHOD_NONE_SENTINEL, account_number: account.account_number ?? '', provider_name: account.provider_name ?? '' }); setFormError(null); setShowModal(true); }}>Edit</button>{' '}
                     <button type="button" className="button button--secondary" onClick={() => void handleDeactivate(account.account_id ?? account.id ?? '')}>Deactivate</button>
                   </td>
                 </tr>
@@ -211,7 +261,7 @@ export function AccountantCoaPage() {
           </div>
           <div className="users-card__actions">
             <button type="button" className="button button--secondary" onClick={() => void loadAccounts()}>Refresh</button>
-            <button ref={triggerBtnRef} type="button" className="button button--primary" onClick={() => { setActiveId(null); setForm(emptyForm()); setFormError(null); setShowModal(true); setStatusMessage(null) }}>New account</button>
+            <button ref={triggerBtnRef} type="button" className="button button--primary" onClick={() => { setActiveId(null); setForm(emptyForm(coaRef.account_types[0] ?? 'Asset')); setFormError(null); setShowModal(true); setStatusMessage(null) }}>New account</button>
           </div>
         </div>
         <div className="exec-dash__row">
@@ -243,7 +293,7 @@ export function AccountantCoaPage() {
                         <span className="form-field__label">Account code</span>
                         <input
                           value={form.code}
-                          placeholder="e.g. 1130"
+                          placeholder={suggestedCodePlaceholder}
                           onChange={(event) => setForm((current) => ({ ...current, code: event.target.value }))}
                           style={{ display: 'block', width: '100%', marginTop: '0.25rem', minHeight: '2.75rem' }}
                         />
@@ -256,12 +306,9 @@ export function AccountantCoaPage() {
                           required
                           style={{ display: 'block', width: '100%', marginTop: '0.25rem', minHeight: '2.75rem' }}
                         >
-                          <option value="Asset">Asset</option>
-                          <option value="Contra-Asset">Contra-Asset</option>
-                          <option value="Liability">Liability</option>
-                          <option value="Equity">Equity</option>
-                          <option value="Income">Income</option>
-                          <option value="Expense">Expense</option>
+                          {coaRef.account_types.map((typeOption) => (
+                            <option key={typeOption} value={typeOption}>{typeOption}</option>
+                          ))}
                         </select>
                       </label>
                       <label className="form-field" style={{ gridColumn: '1 / -1' }}>
@@ -276,13 +323,23 @@ export function AccountantCoaPage() {
                       </label>
                       <label className="form-field">
                         <span className="form-field__label">Reporting group</span>
-                        <input
+                        <select
                           value={form.reporting_group}
-                          placeholder="Current Assets"
                           onChange={(event) => setForm((current) => ({ ...current, reporting_group: event.target.value }))}
                           required
                           style={{ display: 'block', width: '100%', marginTop: '0.25rem', minHeight: '2.75rem' }}
-                        />
+                        >
+                          <option value="">
+                            {refLoading && coaRef.reporting_groups.length === 0
+                              ? 'Loading reference data…'
+                              : 'Select a reporting group…'}
+                          </option>
+                          {coaRef.reporting_groups.map((row) => (
+                            <option key={row.reporting_group} value={row.reporting_group}>
+                              {row.reporting_group} ({row.range_start}-{row.range_end})
+                            </option>
+                          ))}
+                        </select>
                       </label>
                       <label className="form-field">
                         <span className="form-field__label">Payment method (optional)</span>
@@ -291,11 +348,12 @@ export function AccountantCoaPage() {
                           onChange={(event) => setForm((current) => ({ ...current, payment_method_type: event.target.value }))}
                           style={{ display: 'block', width: '100%', marginTop: '0.25rem', minHeight: '2.75rem' }}
                         >
-                          <option value="not-a-payment-account">Not a payment account</option>
-                          <option value="Mobile Money">Mobile Money</option>
-                          <option value="Bank">Bank</option>
-                          <option value="Cash">Cash</option>
-                          <option value="Card">Card</option>
+                          <option value={PAYMENT_METHOD_NONE_SENTINEL}>Not a payment account</option>
+                          {coaRef.payment_methods.map((pm) => (
+                            <option key={pm} value={pm}>
+                              {PAYMENT_METHOD_DISPLAY[pm] ?? pm}
+                            </option>
+                          ))}
                         </select>
                       </label>
                       <label className="form-field" style={{ gridColumn: '1 / -1' }}>
@@ -318,7 +376,7 @@ export function AccountantCoaPage() {
                     </div>
                   </div>
                   <div className="modal__footer">
-                    <button type="button" className="button button--secondary" onClick={() => { setShowModal(false); setActiveId(null); setForm(emptyForm()) }}>Cancel</button>{' '}
+                    <button type="button" className="button button--secondary" onClick={() => { setShowModal(false); setActiveId(null); setForm(emptyForm(coaRef.account_types[0] ?? 'Asset')) }}>Cancel</button>{' '}
                     <button type="submit" className="button button--primary" disabled={submitting}>{submitting ? 'Saving…' : activeId ? 'Save changes' : 'Save account'}</button>
                   </div>
                 </form>

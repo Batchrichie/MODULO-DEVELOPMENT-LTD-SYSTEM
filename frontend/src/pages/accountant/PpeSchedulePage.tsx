@@ -77,7 +77,7 @@ export function PpeSchedulePage() {
         </div>
 
         {!rows.length ? (
-          <div className="exec-dash__state-card exec-dash__state-card--empty"><h2 className="exec-dash__state-title">No PPE schedule data found</h2><p className="exec-dash__state-message">No rows are available for the `ppe_schedule` resource.</p></div>
+          <div className="exec-dash__state-card exec-dash__state-card--empty"><h2 className="exec-dash__state-title">No PPE schedule data found</h2><p className="exec-dash__state-message">No rows are available for the `ppe_schedule` resource. This page currently calls a resource that is not in the confirmed whitelist and will be corrected in a follow-up defect ticket.</p></div>
         ) : (
           <div style={{ overflowX: 'auto', padding: '0 21px 21px' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>

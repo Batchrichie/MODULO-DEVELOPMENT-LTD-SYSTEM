@@ -18,18 +18,29 @@ async function callRpc<T>(
     return { ok: false, error: error.message, code: error.code }
   }
 
-  // Parse the envelope returned by api.ok()/api.err()
-  const envelope = data as { success: boolean; data: T; error: { code: string; message: string } | null } | null
-  if (!envelope) {
+  // Some RPCs return a business envelope from api.ok()/api.err().
+  // Others return plain arrays or objects directly.
+  const envelope =
+    data &&
+    typeof data === 'object' &&
+    !Array.isArray(data) &&
+    'success' in data &&
+    'data' in data
+      ? (data as { success: boolean; data: T; error: { code: string; message: string } | null })
+      : null
+
+  if (envelope) {
+    if (envelope.success === false) {
+      return { ok: false, error: envelope.error?.message ?? 'Unknown error', code: envelope.error?.code }
+    }
+    return { ok: true, data: envelope.data, raw: data }
+  }
+
+  if (data === null || data === undefined) {
     return { ok: false, error: 'No response from server', code: 'NO_RESPONSE' }
   }
 
-  // Business-logic error encoded in the envelope
-  if (envelope.success === false) {
-    return { ok: false, error: envelope.error?.message ?? 'Unknown error', code: envelope.error?.code }
-  }
-
-  return { ok: true, data: envelope.data, raw: data }
+  return { ok: true, data: data as T, raw: data }
 }
 
 export type AccountantAccount = {
@@ -95,6 +106,50 @@ export type Invoice = {
   getfund?: number | null
   functional_amount?: number | null
   [key: string]: unknown
+}
+
+export type PayslipRecord = {
+  payslip_id?: string
+  id?: string
+  run_id?: string
+  period?: string | null
+  status?: string | null
+  gross_salary?: number | null
+  paye?: number | null
+  ssnit_employee?: number | null
+  ssnit_employer?: number | null
+  other_deductions?: number | null
+  net_salary?: number | null
+  [key: string]: unknown
+}
+
+export type MyEmployeeRecord = {
+  employee_id?: string
+  id?: string
+  full_name?: string | null
+  email?: string | null
+  role?: string | null
+  employment_status?: string | null
+  staff_category?: string | null
+  [key: string]: unknown
+}
+
+export async function fetchMyEmployeeRecord(
+  email?: string,
+): Promise<AccountantRpcResult<MyEmployeeRecord | null>> {
+  const result = await getRecords<MyEmployeeRecord[]>('employees', 1, 100)
+  if (!result.ok) return result
+
+  const rows = result.data ?? []
+  const matchingEmployee = email
+    ? rows.find((row) => (row.email ?? '').toLowerCase() === email.toLowerCase())
+    : undefined
+
+  return {
+    ok: true,
+    data: matchingEmployee ?? rows[0] ?? null,
+    raw: result.raw,
+  }
 }
 
 export type CustomerPayment = {
@@ -204,7 +259,7 @@ export async function fetchAccounts(): Promise<AccountantRpcResult<AccountantAcc
   const result = await callRpc<any>('get_records', {
     p_resource: 'accounts',
     p_page: 1,
-    p_limit: 100,
+    p_limit: 1000,
   })
 
   if (!result.ok) return result
@@ -241,7 +296,7 @@ export async function fetchJournalEntries(): Promise<AccountantRpcResult<Account
   const result = await callRpc<any>('get_records', {
     p_resource: 'journals',
     p_page: 1,
-    p_limit: 100,
+    p_limit: 1000,
   })
 
   if (!result.ok) return result
@@ -294,6 +349,20 @@ export async function fetchTaxRates(): Promise<AccountantRpcResult<TaxRateSettin
   return { ok: true, data: rows as TaxRateSetting[], raw: result.raw }
 }
 
+export async function fetchMyPayslips(
+  page = 1,
+  limit = 25,
+): Promise<AccountantRpcResult<PayslipRecord[]>> {
+  const result = await callRpc<PayslipRecord[]>('get_my_payslips', {
+    p_page: page,
+    p_limit: limit,
+  })
+
+  if (!result.ok) return result
+
+  const rows = Array.isArray(result.data) ? result.data : (result.data as any)?.rows || []
+  return { ok: true, data: rows as PayslipRecord[], raw: result.raw }
+}
 
 export async function taxRatesUpdate(taxType: string, rate: number): Promise<AccountantRpcResult<{ success: boolean }>> {
   return callRpc<{ success: boolean }>('tax_rates_update', {
@@ -366,6 +435,26 @@ export async function fetchProjectProfitability(
   const result = await callRpc<ProjectProfitability>('report_project_profitability', { p_project_id: projectId })
   if (!result.ok) return result
   return { ok: true, data: result.data as ProjectProfitability, raw: result.raw }
+}
+
+export type CoaCodeRangeRow = {
+  reporting_group: string
+  range_start: number
+  range_end: number
+  increment: number
+}
+
+export type CoaReferenceData = {
+  reporting_groups: CoaCodeRangeRow[]
+  account_types: string[]
+  payment_methods: string[]
+}
+
+export async function fetchCoaReference(): Promise<AccountantRpcResult<CoaReferenceData>> {
+  const result = await callRpc<CoaReferenceData>('coa_reference_data', {})
+  if (!result.ok) return result
+  const payload = (result.raw as any)?.data ?? result.data
+  return { ok: true, data: payload as CoaReferenceData, raw: result.raw }
 }
 
 export function normalizeTaxRates(rows: TaxRateSetting[]): TaxRates {

@@ -76,7 +76,7 @@ export function DepreciationJournalPage() {
         </div>
 
         {!rows.length ? (
-          <div className="exec-dash__state-card exec-dash__state-card--empty"><h2 className="exec-dash__state-title">No depreciation journal rows found</h2><p className="exec-dash__state-message">No depreciation journal records are currently available.</p></div>
+          <div className="exec-dash__state-card exec-dash__state-card--empty"><h2 className="exec-dash__state-title">No depreciation journal rows found</h2><p className="exec-dash__state-message">No depreciation journal records are currently available. This page currently calls a resource that is not in the confirmed whitelist and will be corrected in a follow-up defect ticket.</p></div>
         ) : (
           <div style={{ overflowX: 'auto', padding: '0 21px 21px' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
