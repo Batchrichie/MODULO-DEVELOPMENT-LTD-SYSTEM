@@ -52,8 +52,22 @@ export function AssetRegisterPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
-  const [showCreateModal, setShowCreateModal] = useState(false)
-  const [showDisposeModal, setShowDisposeModal] = useState(false)
+  // #region debug-point A:setShowModals-traces
+  const [showCreateModal, _setShowCreateModal] = useState(false)
+  const setShowCreateModal = (next: boolean) => {
+    ;(window as any).__ar_showCreate = next
+    const stackLines = new Error('stack').stack?.split('\n').slice(2, 6).join(' ← ') ?? '(no stack)'
+    console.warn(`[AR-MODAL] setShowCreateModal(${next}) — current was ${showCreateModal} | call chain: ${stackLines}`)
+    return _setShowCreateModal(next)
+  }
+  const [showDisposeModal, _setShowDisposeModal] = useState(false)
+  const setShowDisposeModal = (next: boolean) => {
+    ;(window as any).__ar_showDispose = next
+    const stackLines = new Error('stack').stack?.split('\n').slice(2, 6).join(' ← ') ?? '(no stack)'
+    console.warn(`[AR-MODAL] setShowDisposeModal(${next}) — current was ${showDisposeModal} | call chain: ${stackLines}`)
+    return _setShowDisposeModal(next)
+  }
+  // #endregion
   const [assetForm, setAssetForm] = useState<AssetCreateForm>(emptyAssetForm())
   const [disposeAssetId, setDisposeAssetId] = useState('')
   const [disposeAssetName, setDisposeAssetName] = useState('')

@@ -1,0 +1,8 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "/^cd c:/Users/Richmond/Downloads/MODULO-DEVELOPMENT-LTD-SYSTEM ; node - <<'NODE'\nconst \\{ createClient \\} = require\\('c:/Users/Richmond/Downloads/MODULO-DEVELOPMENT-LTD-SYSTEM/frontend/node_modules/@supabase/supabase-js'\\);\nconst url = 'https://erinyjxrfectuepshstg\\.supabase\\.co';\nconst key = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\\.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVyaW55anhyZmVjdHVlcHNoc3RnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ0Mzg5MzYsImV4cCI6MjEwMDAxNDkzNn0\\.sg4HbUxK_ac9BM5K_yh7bgy6W25f7W8e4CVa1MjIVKc';\nconst supabase = createClient\\(url, key\\);\nconst emails = \\['projectm@admin\\.com','projectmanager@admin\\.com','accounts@admin\\.com','ceo@admin\\.com'\\];\nconst passwords = \\['Password123!','Admin123!','P@ssw0rd!','Password1!','Admin@123','Welcome123!','Supabase123!','Qwerty123!','Abcd1234!','Test123!','Password123','Admin123','Welcome2024!','Carems2024!','Carems123!'\\];\n\\(async \\(\\) => \\{\n  for \\(const email of emails\\) \\{\n    for \\(const password of passwords\\) \\{\n      const \\{ data, error \\} = await supabase\\.auth\\.signInWithPassword\\(\\{ email, password \\}\\);\n      if \\(!error && data\\.session\\) \\{\n        console\\.log\\(JSON\\.stringify\\(\\{ email, password, success: true \\}\\)\\);\n        process\\.exit\\(0\\);\n      \\}\n    \\}\n  \\}\n  console\\.log\\(JSON\\.stringify\\(\\{ success: false \\}\\)\\);\n\\}\\)\\(\\);\nNODE$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}

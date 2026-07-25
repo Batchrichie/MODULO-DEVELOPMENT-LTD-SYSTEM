@@ -38,7 +38,15 @@ export function TaxPage() {
   const [formError, setFormError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
-  const [showUpdateModal, setShowUpdateModal] = useState(false)
+  // #region debug-point A:setShowUpdateModal-traces
+  const [showUpdateModal, _setShowUpdateModal] = useState(false)
+  const setShowUpdateModal = (next: boolean) => {
+    ;(window as any).__tax_showUpdate = next
+    const stackLines = new Error('stack').stack?.split('\n').slice(2, 6).join(' ← ') ?? '(no stack)'
+    console.warn(`[TAX-MODAL] setShowUpdateModal(${next}) — current was ${showUpdateModal} | call chain: ${stackLines}`)
+    return _setShowUpdateModal(next)
+  }
+  // #endregion
   const [selectedTaxType, setSelectedTaxType] = useState<string>('')
   const [selectedRate, setSelectedRate] = useState<string>('')
   const [reportPeriod, setReportPeriod] = useState(new Date().toISOString().slice(0, 7))

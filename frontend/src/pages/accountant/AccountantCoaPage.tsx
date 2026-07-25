@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { formatMoneyGhs } from '../../lib/formatMoney'
 import { createAccount, deactivateAccount, fetchAccounts, updateAccount } from '../../lib/rpc/accountant'
 import '../../styles/executive-dashboard.css'
 
 interface CoaFormState {
+  code: string
   name: string
   type: string
   reporting_group: string
@@ -13,10 +14,11 @@ interface CoaFormState {
 }
 
 const emptyForm = (): CoaFormState => ({
+  code: '',
   name: '',
   type: 'Asset',
   reporting_group: '',
-  payment_method_type: '',
+  payment_method_type: 'not-a-payment-account',
   account_number: '',
   provider_name: '',
 })
@@ -56,7 +58,24 @@ export function AccountantCoaPage() {
   const [form, setForm] = useState<CoaFormState>(emptyForm())
   const [submitting, setSubmitting] = useState(false)
   const [activeId, setActiveId] = useState<string | null>(null)
-  const [showModal, setShowModal] = useState(false)
+  const [showModal, _setShowModal] = useState(false)
+  const triggerBtnRef = useRef<HTMLButtonElement | null>(null)
+  const modalOpenedAtRef = useRef<number>(0)
+  const [popoverStyle, setPopoverStyle] = useState<{ left: number; top: number; maxWidth: number }>({ left: 24, top: 140, maxWidth: 960 })
+  function setShowModal(next: boolean) {
+    if (next) {
+      modalOpenedAtRef.current = performance.now()
+      requestAnimationFrame(() => {
+        const rect = triggerBtnRef.current?.getBoundingClientRect()
+        const width = Math.min(960, window.innerWidth - 32)
+        const rightEdge = rect ? rect.left - 8 : window.innerWidth - 8
+        const left = Math.max(8, Math.min(window.innerWidth - width - 8, rightEdge - width))
+        const top = rect ? Math.max(8, Math.min(window.innerHeight - 640, rect.top)) : 140
+        setPopoverStyle({ left, top, maxWidth: width })
+      })
+    }
+    _setShowModal(next)
+  }
   const [formError, setFormError] = useState<string | null>(null)
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
 
@@ -84,10 +103,11 @@ export function AccountantCoaPage() {
     setFormError(null)
 
     const payload = {
+      ...(form.code ? { code: form.code } : {}),
       name: form.name,
       type: form.type,
       reporting_group: form.reporting_group,
-      ...(form.payment_method_type ? { payment_method_type: form.payment_method_type } : {}),
+      ...(form.payment_method_type && form.payment_method_type !== 'not-a-payment-account' ? { payment_method_type: form.payment_method_type } : {}),
       ...(form.account_number ? { account_number: form.account_number } : {}),
       ...(form.provider_name ? { provider_name: form.provider_name } : {}),
     }
@@ -154,7 +174,7 @@ export function AccountantCoaPage() {
                   <td style={{ padding: '0.5rem' }}>{account.reporting_group ?? '—'}</td>
                   <td style={{ padding: '0.5rem' }}>{account.is_postable === false ? 'Inactive' : 'Active'}</td>
                   <td style={{ padding: '0.5rem' }}>
-                    <button type="button" className="button button--secondary" onClick={() => { setActiveId(account.account_id ?? account.id ?? null); setForm({ name: account.name ?? '', type: account.type ?? 'Asset', reporting_group: account.reporting_group ?? '', payment_method_type: account.payment_method_type ?? '', account_number: account.account_number ?? '', provider_name: account.provider_name ?? '' }); setFormError(null); setShowModal(true); }}>Edit</button>{' '}
+                    <button type="button" className="button button--secondary" onClick={() => { setActiveId(account.account_id ?? account.id ?? null); setForm({ code: account.code ?? '', name: account.name ?? '', type: account.type ?? 'Asset', reporting_group: account.reporting_group ?? '', payment_method_type: account.payment_method_type ?? 'not-a-payment-account', account_number: account.account_number ?? '', provider_name: account.provider_name ?? '' }); setFormError(null); setShowModal(true); }}>Edit</button>{' '}
                     <button type="button" className="button button--secondary" onClick={() => void handleDeactivate(account.account_id ?? account.id ?? '')}>Deactivate</button>
                   </td>
                 </tr>
@@ -191,7 +211,7 @@ export function AccountantCoaPage() {
           </div>
           <div className="users-card__actions">
             <button type="button" className="button button--secondary" onClick={() => void loadAccounts()}>Refresh</button>
-            <button type="button" className="button button--primary" onClick={() => { setActiveId(null); setForm(emptyForm()); setFormError(null); setShowModal(true); setStatusMessage(null) }}>New account</button>
+            <button ref={triggerBtnRef} type="button" className="button button--primary" onClick={() => { setActiveId(null); setForm(emptyForm()); setFormError(null); setShowModal(true); setStatusMessage(null) }}>New account</button>
           </div>
         </div>
         <div className="exec-dash__row">
@@ -206,54 +226,100 @@ export function AccountantCoaPage() {
           {content()}
         </div>
           {showModal && (
-            <div className="modal-overlay" onClick={(e) => { if (e.target !== e.currentTarget) return; setShowModal(false) }} role="dialog" aria-modal="true">
-              <div className="modal">
+            <div className="modal-overlay" style={{ display: 'block', alignItems: 'unset', justifyContent: 'unset', padding: 0, background: 'transparent' }} onClick={(e) => { if (e.target !== e.currentTarget) return; if (performance.now() - modalOpenedAtRef.current < 300) return; setShowModal(false) }} role="dialog" aria-modal="true">
+              <div className="modal" style={{ position: 'absolute', left: popoverStyle.left, top: popoverStyle.top, maxWidth: popoverStyle.maxWidth, margin: 0, transform: 'none' }}>
                 <div className="modal__header">
                   <div className="modal__header-text">
-                    <h2 className="modal__title">{activeId ? 'Update Account' : 'Create Account'}</h2>
-                    <p className="modal__subtitle">Account code is assigned by the server and is handled by the backend.</p>
+                    <h2 className="modal__title">{activeId ? 'Update Account' : 'New account'}</h2>
+                    <p className="modal__subtitle">Create a postable ledger account.</p>
                   </div>
                   <button type="button" aria-label="Close dialog" className="modal__close" onClick={() => setShowModal(false)}>×</button>
                 </div>
                 <form onSubmit={(event) => void handleSubmit(event)}>
                   <div className="modal__body">
                     {formError && <div className="exec-dash__state-card exec-dash__state-card--error exec-dash__state-card--inline"><h2 className="exec-dash__state-title">Error</h2><p className="exec-dash__state-message">{formError}</p></div>}
-                    <p className="exec-dash__mock-note">Account code is assigned by the server and is not entered here.</p>
-                    <label>
-                      Name
-                      <input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} required style={{ display: 'block', width: '100%', marginTop: '0.25rem', marginBottom: '0.75rem' }} />
-                    </label>
-                    <label>
-                      Type
-                      <select value={form.type} onChange={(event) => setForm((current) => ({ ...current, type: event.target.value }))} style={{ display: 'block', width: '100%', marginTop: '0.25rem', marginBottom: '0.75rem' }}>
-                        <option value="Asset">Asset</option>
-                        <option value="Contra-Asset">Contra-Asset</option>
-                        <option value="Liability">Liability</option>
-                        <option value="Equity">Equity</option>
-                        <option value="Income">Income</option>
-                        <option value="Expense">Expense</option>
-                      </select>
-                    </label>
-                    <label>
-                      Reporting Group
-                      <input value={form.reporting_group} onChange={(event) => setForm((current) => ({ ...current, reporting_group: event.target.value }))} required style={{ display: 'block', width: '100%', marginTop: '0.25rem', marginBottom: '0.75rem' }} />
-                    </label>
-                    <label>
-                      Payment Method Type
-                      <input value={form.payment_method_type} onChange={(event) => setForm((current) => ({ ...current, payment_method_type: event.target.value }))} style={{ display: 'block', width: '100%', marginTop: '0.25rem', marginBottom: '0.75rem' }} />
-                    </label>
-                    <label>
-                      Account Number
-                      <input value={form.account_number} onChange={(event) => setForm((current) => ({ ...current, account_number: event.target.value }))} style={{ display: 'block', width: '100%', marginTop: '0.25rem', marginBottom: '0.75rem' }} />
-                    </label>
-                    <label>
-                      Provider Name
-                      <input value={form.provider_name} onChange={(event) => setForm((current) => ({ ...current, provider_name: event.target.value }))} style={{ display: 'block', width: '100%', marginTop: '0.25rem', marginBottom: '0.75rem' }} />
-                    </label>
+                    <div className="form-grid">
+                      <label className="form-field">
+                        <span className="form-field__label">Account code</span>
+                        <input
+                          value={form.code}
+                          placeholder="e.g. 1130"
+                          onChange={(event) => setForm((current) => ({ ...current, code: event.target.value }))}
+                          style={{ display: 'block', width: '100%', marginTop: '0.25rem', minHeight: '2.75rem' }}
+                        />
+                      </label>
+                      <label className="form-field">
+                        <span className="form-field__label">Account type</span>
+                        <select
+                          value={form.type}
+                          onChange={(event) => setForm((current) => ({ ...current, type: event.target.value }))}
+                          required
+                          style={{ display: 'block', width: '100%', marginTop: '0.25rem', minHeight: '2.75rem' }}
+                        >
+                          <option value="Asset">Asset</option>
+                          <option value="Contra-Asset">Contra-Asset</option>
+                          <option value="Liability">Liability</option>
+                          <option value="Equity">Equity</option>
+                          <option value="Income">Income</option>
+                          <option value="Expense">Expense</option>
+                        </select>
+                      </label>
+                      <label className="form-field" style={{ gridColumn: '1 / -1' }}>
+                        <span className="form-field__label">Account name</span>
+                        <input
+                          value={form.name}
+                          placeholder="e.g. Petty Cash"
+                          onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
+                          required
+                          style={{ display: 'block', width: '100%', marginTop: '0.25rem', minHeight: '2.75rem' }}
+                        />
+                      </label>
+                      <label className="form-field">
+                        <span className="form-field__label">Reporting group</span>
+                        <input
+                          value={form.reporting_group}
+                          placeholder="Current Assets"
+                          onChange={(event) => setForm((current) => ({ ...current, reporting_group: event.target.value }))}
+                          required
+                          style={{ display: 'block', width: '100%', marginTop: '0.25rem', minHeight: '2.75rem' }}
+                        />
+                      </label>
+                      <label className="form-field">
+                        <span className="form-field__label">Payment method (optional)</span>
+                        <select
+                          value={form.payment_method_type}
+                          onChange={(event) => setForm((current) => ({ ...current, payment_method_type: event.target.value }))}
+                          style={{ display: 'block', width: '100%', marginTop: '0.25rem', minHeight: '2.75rem' }}
+                        >
+                          <option value="not-a-payment-account">Not a payment account</option>
+                          <option value="Mobile Money">Mobile Money</option>
+                          <option value="Bank">Bank</option>
+                          <option value="Cash">Cash</option>
+                          <option value="Card">Card</option>
+                        </select>
+                      </label>
+                      <label className="form-field" style={{ gridColumn: '1 / -1' }}>
+                        <span className="form-field__label">Provider / account number (optional)</span>
+                        <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.25rem' }}>
+                          <input
+                            value={form.provider_name}
+                            placeholder="e.g. GCB"
+                            onChange={(event) => setForm((current) => ({ ...current, provider_name: event.target.value }))}
+                            style={{ flex: 1, minHeight: '2.75rem' }}
+                          />
+                          <input
+                            value={form.account_number}
+                            placeholder="e.g. 0123456789"
+                            onChange={(event) => setForm((current) => ({ ...current, account_number: event.target.value }))}
+                            style={{ flex: 1, minHeight: '2.75rem' }}
+                          />
+                        </div>
+                      </label>
+                    </div>
                   </div>
                   <div className="modal__footer">
                     <button type="button" className="button button--secondary" onClick={() => { setShowModal(false); setActiveId(null); setForm(emptyForm()) }}>Cancel</button>{' '}
-                    <button type="submit" className="button button--primary" disabled={submitting}>{submitting ? 'Saving…' : activeId ? 'Save Changes' : 'Create Account'}</button>
+                    <button type="submit" className="button button--primary" disabled={submitting}>{submitting ? 'Saving…' : activeId ? 'Save changes' : 'Save account'}</button>
                   </div>
                 </form>
               </div>

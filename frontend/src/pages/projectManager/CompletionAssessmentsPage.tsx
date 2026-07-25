@@ -161,6 +161,13 @@ export function CompletionAssessmentsPage() {
 
         {/* backend RPC is available; submission enabled */}
 
+        {statusMessage && (
+          <div className="exec-dash__state-card exec-dash__state-card--success exec-dash__state-card--inline" style={{ marginBottom: '1rem' }}>
+            <h2 className="exec-dash__state-title">Success</h2>
+            <p className="exec-dash__state-message">{statusMessage}</p>
+          </div>
+        )}
+
         <div className="exec-dash__row">
             <div className="exec-dash__panel">
               <div className="registry-toolbar">
@@ -246,7 +253,6 @@ export function CompletionAssessmentsPage() {
             <form onSubmit={(e) => void handleSubmit(e)}>
               <div className="modal__body">
                 {formError && <div className="exec-dash__state-card exec-dash__state-card--error exec-dash__state-card--inline"><h2 className="exec-dash__state-title">Error</h2><p className="exec-dash__state-message">{formError}</p></div>}
-                {statusMessage && <div className="exec-dash__state-card" style={{ marginBottom: '1rem' }}><h2 className="exec-dash__state-title">Success</h2><p className="exec-dash__state-message">{statusMessage}</p></div>}
                 <div className="form-grid">
                   <label className="form-field form-field--full">
                     <span className="form-field__label">Project</span>
