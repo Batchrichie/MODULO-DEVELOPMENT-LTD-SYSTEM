@@ -145,9 +145,13 @@ export async function fetchMyEmployeeRecord(
     ? rows.find((row) => (row.email ?? '').toLowerCase() === email.toLowerCase())
     : undefined
 
+  if (!matchingEmployee) {
+    return { ok: false, error: 'Employee record not found for current user', code: 'NOT_FOUND' }
+  }
+
   return {
     ok: true,
-    data: matchingEmployee ?? rows[0] ?? null,
+    data: matchingEmployee,
     raw: result.raw,
   }
 }
@@ -165,6 +169,33 @@ export type CustomerPayment = {
 export type TaxRateSetting = {
   tax_type?: string | null
   rate?: number | null
+  [key: string]: unknown
+}
+
+export type RentalContract = {
+  contract_id?: string
+  id?: string
+  equipment_id?: string | null
+  customer_id?: string | null
+  project_id?: string | null
+  start_date?: string | null
+  end_date?: string | null
+  rate?: number | null
+  created_at?: string | null
+  [key: string]: unknown
+}
+
+export type RentalInvoice = {
+  invoice_id?: string
+  id?: string
+  invoice_number?: string | null
+  journal_id?: string | null
+  amount_due?: number | null
+  rental_contract_id?: string | null
+  vat?: number | null
+  nhil?: number | null
+  getfund?: number | null
+  functional_amount?: number | null
   [key: string]: unknown
 }
 
@@ -312,7 +343,15 @@ export async function fetchTrialBalance(asOf: string): Promise<AccountantRpcResu
 
   if (!result.ok) return result
 
-  const rows = Array.isArray(result.data) ? result.data : (result.data as any)?.rows || []
+  const payload = result.data as any
+  const rows = Array.isArray(payload)
+    ? payload
+    : Array.isArray(payload?.rows)
+    ? payload.rows
+    : Array.isArray(payload?.accounts)
+    ? payload.accounts
+    : []
+
   return { ok: true, data: rows as TrialBalanceRow[], raw: result.raw }
 }
 
@@ -332,6 +371,29 @@ export async function expenseCreate(payload: Record<string, unknown>): Promise<A
   return callRpc<Expense>('expense_create', {
     p_payload: payload,
   })
+}
+
+export async function rentalInvoiceCreate(params: {
+  contractId: string
+  days: number
+  applyVat: boolean
+  applyNhil: boolean
+  applyGetfund: boolean
+  rateOverride?: number | null
+}): Promise<AccountantRpcResult<RentalInvoice>> {
+  const args: Record<string, unknown> = {
+    p_contract_id: params.contractId,
+    p_days: params.days,
+    p_apply_vat: params.applyVat,
+    p_apply_nhil: params.applyNhil,
+    p_apply_getfund: params.applyGetfund,
+  }
+
+  if (params.rateOverride !== undefined && params.rateOverride !== null) {
+    args.p_rate_override = params.rateOverride
+  }
+
+  return callRpc<RentalInvoice>('rental_invoice_create', args)
 }
 
 export async function paymentMadeCreate(payload: Record<string, unknown>): Promise<AccountantRpcResult<SupplierPayment>> {
@@ -362,6 +424,16 @@ export async function fetchMyPayslips(
 
   const rows = Array.isArray(result.data) ? result.data : (result.data as any)?.rows || []
   return { ok: true, data: rows as PayslipRecord[], raw: result.raw }
+}
+
+/**
+ * Fetch the signed-in employee's profile from the backend.
+ * Backend should implement `api.get_my_profile()` returning the caller's employee record.
+ */
+export async function fetchMyProfile(): Promise<AccountantRpcResult<MyEmployeeRecord>> {
+  const result = await callRpc<MyEmployeeRecord>('get_my_profile', {})
+  if (!result.ok) return result
+  return { ok: true, data: result.data as MyEmployeeRecord, raw: result.raw }
 }
 
 export async function taxRatesUpdate(taxType: string, rate: number): Promise<AccountantRpcResult<{ success: boolean }>> {

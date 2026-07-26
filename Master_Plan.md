@@ -1,5 +1,16 @@
-# CAREMS — MASTER PLAN & INSTRUCTIONS (FINAL, v2.0)
-**Owner:** Instructor. This is the complete, closed plan. Every task below is written as an instruction to hand to the relevant expert verbatim — the Instructor coordinates, reviews, and sequences; it does not write code. When you start building, this document should not need revisiting.
+# CAREMS — MASTER PLAN & INSTRUCTIONS (v2.1 — IFRS Corrections)
+**Owner:** Instructor. This is the complete, closed plan. Every task below is written as an instruction to hand to the relevant expert verbatim — the Instructor coordinates, reviews, and sequences; it does not write code.
+
+## Corrections applied in v2.1 (from v2.0)
+
+This version closes two decisions that were technically resolved in the live database but never written back into this plan, and opens the first tranche of new IFRS compliance work (IAS 1 presentation, with IAS 2, IAS 37, IFRS 9, and IAS 12 scoped for v2.2 pending two open questions — see Section 9).
+
+1. **Decision #6 (PAYE band sourcing) — resolved, not just documented.** The live `paye_tax_bands` table was seeded with values that are correct under a documented interpretation of Act 1111, but this plan still described the decision as an open fallback ("Instructor sources figures directly"). Corrected below with the actual resolution and its legal basis.
+2. **New Decision #8 (IFRS 16, lessor accounting) added.** Never previously addressed. The company is lessor-only (equipment rented out, nothing leased in) with short-term operating-lease-type rental contracts. This has a direct consequence for the still-unbuilt rental invoicing endpoint (flagged as a known gap in `CAREMS_Frontend_Engineering_Standard.md`) — revenue must accrue over the rental period, not spike at invoice date.
+3. **New Ticket API-9 added** — an audit of the existing reporting endpoints against IAS 1 classification rules. No schema change; a review ticket to run before any further reporting work is trusted.
+4. **New reference document added** — `CAREMS_Financial_Statement_Presentation_Standard.md`, detailing the actual GHS-denominated statement formats (SOFP, P&L, Changes in Equity, Cash Flows) this business should produce under IAS 1, mapped to the live Chart of Accounts.
+
+No changes were required to `Chart_of_Accounts.md` in this version — Fixes 1–3 are documentation and audit only. Chart of Accounts changes begin in v2.2 (IAS 2, IAS 37, IFRS 9, IAS 12), pending sign-off on defects-liability period and GRA's construction tax-timing basis.
 
 ---
 
@@ -9,7 +20,7 @@ A finance-driven Enterprise Management System (CAREMS) for a construction/archit
 
 **Core principle carried through every task:** operational forms (invoices, payroll, rentals, expenses) auto-generate journal entries. No module operates as a silo — everything ends up in the General Ledger.
 
-**Phase One only.** Inventory, procurement, maintenance scheduling, GPS tracking, mobile app, client portal, and BI/forecasting are explicitly Phase Two — do not let scope creep into Phase One tasks.
+**Phase One only.** Inventory, procurement, maintenance scheduling, GPS tracking, mobile app, client portal, and BI/forecasting are explicitly Phase Two — do not let scope creep into Phase One tasks. (Note: v2.2's IAS 2 materials-inventory work is a *financial reporting* requirement, not the Phase Two "Inventory & Stores Management" operational module — the two are not the same scope and should not be conflated when they're eventually both in flight.)
 
 ---
 
@@ -23,7 +34,8 @@ A finance-driven Enterprise Management System (CAREMS) for a construction/archit
 | API Contract (`API_Contract.md`) | Backend, Frontend |
 | Process Flows (`Flow_1/2/3_*.mermaid`) | Backend, Frontend, Integration testing |
 | Wireframes (`CAREMS_Wireframes.html`) | Frontend |
-| Reference schema (`CAREMS_Schema_v1.sql`) | **Reference only** — a worked example of what Ticket DB-1 should produce. Note: this file predates the `paye_tax_bands` table and the `journals.reversal_of_journal_id` fix below — it does not reflect the current DB-1/DB-2 ticket text. Build from the ticket text, not from this file. |
+| **Financial Statement Presentation Standard (`CAREMS_Financial_Statement_Presentation_Standard.md`)** | **Backend (reporting endpoints), Instructor (IAS 1 sign-off)** — new in v2.1 |
+| Reference schema (`CAREMS_Schema_v1.sql`) | **Reference only, and now stale** — see `CAREMS_Live_Schema_Reconstructed.sql` for what is actually live. Build from ticket text and the live schema, not from this file. |
 
 ---
 
@@ -41,126 +53,57 @@ A finance-driven Enterprise Management System (CAREMS) for a construction/archit
 ## 4. Build sequence
 
 ```
-Phase 1 — Database            (Tickets DB-1 → DB-4)
+Phase 1 — Database            (Tickets DB-1 → DB-4, complete and live)
         ↓
-Phase 2 — Backend              (Tickets API-1 → API-8, starts once schema is confirmed)
+Phase 2 — Backend              (Tickets API-1 → API-8, complete and live; API-9 new in v2.1)
         ↓ (parallel)
-Phase 3 — Frontend              (Tickets FE-1 → FE-6, starts immediately using the API Contract as spec)
+Phase 3 — Frontend              (Tickets FE-1 → FE-6)
         ↓
 Phase 4 — Integration          (Tickets INT-1 → INT-4)
 ```
 
 ---
 
-## 5. TASK TICKETS — full instructions, ready to hand out
+## 5. TASK TICKETS
 
-### PHASE 1 — Database Expert (Supabase AI)
+*(Tickets DB-1–DB-4, API-1–API-8, and FE-1–FE-6 are unchanged from v2.0 and are complete/live — see `CAREMS_Live_Schema_Reconstructed.sql`. Only the new v2.1 ticket is shown below. Full original ticket text remains in the v2.0 history.)*
 
-**DB-1 — Schema Build**
-> Using `CAREMS_ERD.mermaid` and `Chart_of_Accounts.md` as the specification, create these tables in Supabase: `chart_of_accounts`, `customers`, `suppliers`, `employees`, `users`, `bank_accounts`, `equipment`, `fixed_assets`, `tax_rate_settings`, `paye_tax_bands`, `projects`, `journals`, `journal_lines`, `project_completion_assessments`, `invoices`, `invoice_lines`, `customer_payments`, `expenses`, `supplier_payments`, `rental_contracts`, `payroll_runs`, `payslips`, `audit_log`. Use UUID primary keys (`gen_random_uuid()`), foreign keys exactly as shown in the ERD, and a check constraint on `journal_lines` ensuring a line is either a debit or a credit, never both non-zero. `journal_lines.project_id` must be nullable (overhead transactions have no project). `journals.status` must support `'posted'` and `'reversed'` only (no `'draft'` — every journal in Phase One is auto-generated and posts immediately, per the no-manual-journal-entry principle). Corrections are never edits or deletes of a posted journal — they are a new journal that reverses it. Add `journals.reversal_of_journal_id` (uuid, nullable, self-referencing FK) to link a reversal back to the original, preserving the audit trail. `invoices` must include `rental_contract_id` (uuid, nullable FK to `rental_contracts`) — set only when the invoice was generated from a rental contract, so rental billing stays traceable and distinguishable from project milestone invoicing once posted. Optional, your judgment: `chart_of_accounts` may include an `is_postable` flag (true for leaf accounts, false for pure rollup/reporting-group headers) if you find it useful for enforcing that transactions never post to a summary account — this isn't required by the ERD, just a reasonable addition if it simplifies validation.
+### PHASE 2 — Backend/API Expert (Claude) — v2.1 addition
 
-**DB-2 — Seed Data**
-> Also create a `paye_tax_bands` table (not part of `tax_rate_settings` — PAYE is graduated, not a flat rate): columns `band_id` (uuid pk), `lower_bound` (numeric, **monthly** chargeable income), `upper_bound` (numeric, nullable for the top open-ended band), `rate` (numeric), `effective_from` (date). Ghana PAYE uses 7 graduated bands from 0% to 35%; Phase One applies them as flat monthly brackets with no year-to-date carry-forward (decided — see PAYE_Bands_Reference.sql header). **Do not hardcode band thresholds from memory or invent figures.** If you have live web access, pull the current schedule from gra.gov.gh. If you do not, create the table structure only, leave it unseeded, and report back that you need verified figures — the Instructor will source them and hand them to you directly. Seed `chart_of_accounts` with every account in `Chart_of_Accounts.md` (114 accounts: code, name, type, reporting_group). Seed `tax_rate_settings` with: VAT 15%, NHIL 2.5%, GETFund 2.5%, SSNIT Employee 5.5%, SSNIT Employer 13%.
-
-**DB-3 — Indexes**
-> Add indexes on: `journal_lines(journal_id, account_id, project_id)`, `invoices(project_id, customer_id)`, `expenses(project_id, supplier_id)`, `payslips(run_id)`, `audit_log(table_name, record_id)`.
-
-**DB-4 — Report Back**
-> Report: list of tables created, row count in `chart_of_accounts` after seeding, and any errors encountered while running the above.
+**API-9 — IAS 1 Reporting Compliance Audit**
+> Review `report_sofp`, `report_income_statement`, and `report_cash_flow` against IAS 1's classification and presentation requirements. Specifically confirm: (a) `2300 Bank Loans` is split into its current portion (due within 12 months) and non-current remainder rather than shown as a single liability line; (b) `1150 Contract Assets/WIP` and `1140 Retention Receivable` are classified as current assets; (c) the income statement follows a consistent format (see `CAREMS_Financial_Statement_Presentation_Standard.md` for the function-of-expense format this business should use); (d) the cash flow statement reconciles from profit before tax using the indirect method, given how much WIP movement swings period to period. This is a **review ticket — do not restructure the schema or endpoints yet.** Report findings back to the Instructor as a gap list; schema changes (if any) get their own follow-up ticket.
 
 ---
 
-### PHASE 2 — Backend/API Expert (Claude)
-
-**API-1 — Master Data Endpoints**
-> Build CRUD endpoints for Chart of Accounts, Customers, Suppliers, Employees, Projects, Equipment, Fixed Assets, Bank Accounts, and Tax Rate Settings exactly per `API_Contract.md` Section 1. Apply the response envelope, pagination, and date/money conventions from Section 0 to every endpoint, not just these.
-
-**API-2 — Revenue Recognition (Percentage of Completion)**
-> Build the Project Completion Assessment flow (submit + approve). On approval: `incremental_revenue = (contract_value × percent_complete) − revenue_recognized_to_date`, post `Dr Contract Assets/WIP (1150) / Cr Revenue`. This must never touch Accounts Receivable or Cash — only Contract Assets and Revenue.
-
-**API-3 — Sales Cycle Endpoints**
-> Build Invoice and Customer Payment endpoints per `API_Contract.md` Section 2. Invoicing draws down Contract Assets/WIP first (up to revenue already recognized), then Client Advances for any billed excess, plus VAT/NHIL/GETFund output. Customer Payment must accept an optional `invoice_id`; if absent, post the amount as an advance to Client Advances (2140), never to Revenue.
-
-**API-4 — Expense & Costing Endpoints**
-> Build Expense and Supplier Payment endpoints. On expense entry, check the project's remaining budget; if exceeded, set `budget_flag = true` and return an `INSUFFICIENT_BUDGET` warning — the transaction still posts. Do not block it.
-
-**API-5 — Payroll Endpoints**
-> Build Payroll Run and Payslip endpoints. Calculate PAYE by looking up `paye_tax_bands` and applying standard progressive-bracket math to **a single month's chargeable income only** — no year-to-date tracking, no carry-forward between months (decided: flat-monthly method for Phase One). Calculate SSNIT employee % and employer % and Other Deductions using `tax_rate_settings` (never hardcoded). Post: `Dr Salary Expense, Dr Employer SSNIT Expense / Cr Staff Salaries Payable, Cr PAYE Payable, Cr SSNIT Payable, Cr Other Payroll Deductions Payable`.
-
-**API-6 — Reporting Endpoints**
-> Build every read-only endpoint in `API_Contract.md` Section 3: Trial Balance, Income Statement, Statement of Financial Position, Cash Flow, Project Profitability, Budget vs Actual, Customer/Supplier Ageing, Tax Schedules, Executive Dashboard bundle, Accountant Task Centre.
-
-**API-7 — Access Control**
-> Enforce the Role → Endpoint Access Matrix (`API_Contract.md` Section 4) on every endpoint. Violations return `UNAUTHORIZED_ROLE`.
-
-**API-8 — Report Back**
-> Report: endpoints built, any deviation from the API Contract and why, and one sample request/response per transactional endpoint (Invoice, Expense, Payroll Run, Completion Assessment).
-
----
-
-### PHASE 3 — Frontend Expert (Copilot)
-
-**FE-1 — Executive Dashboard**
-> Build the CEO/MD screen per the "CEO / MD" tab in `CAREMS_Wireframes.html`, calling `/dashboard/executive`. View-only — no write actions anywhere on this screen.
-
-**FE-2 — Accountant Workspace**
-> Build per the "Accountant" tab: Chart of Accounts, Journal Entries (read-only — system-generated only), Invoicing, Expenses, Payroll, Rentals, Tax, Fixed Assets, Reporting. Wire every write action to its endpoint in `API_Contract.md` Section 2.
-
-**FE-3 — Project Manager Workspace**
-> Build per the "Project Manager" tab: My Projects, Completion Assessment submission, Site Reports, Budget vs Actual (read-only).
-
-**FE-4 — Employee Self-Service**
-> Build per the "Employee" tab: Profile, Payslips, Leave, Assigned Projects, Announcements.
-
-**FE-5 — Admin Panel**
-> Build per the "System Administrator" tab: User Management, Roles & Permissions, Audit Log, Security Monitoring.
-
-**FE-6 — Report Back**
-> Report: screens completed, which endpoints each screen calls, and any gaps found in the API Contract while building.
-
----
-
-### PHASE 4 — Integration (Instructor coordinates all three experts)
-
-**INT-1 — Sales Cycle Test**
-> Run `Flow_1_Sales_Cycle.mermaid` end-to-end: create a project → receive an advance → submit and approve a completion assessment → raise an invoice → receive payment. Confirm the Trial Balance stays balanced at every step, and confirm revenue only appears after the completion assessment is approved — never at the advance or invoice step.
-
-**INT-2 — Payroll Test**
-> Run `Flow_2_Payroll.mermaid` end-to-end: run payroll for one period → approve → post → pay. Confirm employer SSNIT appears as an expense (not only a payable) and PAYE/SSNIT payables feed the Tax Reports.
-
-**INT-3 — Expense/Costing Test**
-> Run `Flow_3_Expense_Costing.mermaid` end-to-end: record a supplier expense that exceeds a project's budget. Confirm the warning fires, the transaction still posts, and it surfaces on the Accountant Task Centre.
-
-**INT-4 — Sign-off**
-> Once all three tests pass, Phase One is complete per Section 7 below.
-
----
-
-## 6. Decisions — all closed
+## 6. Decisions — status
 
 1. ✅ Chart of Accounts codes mapped to every "Auto-Posts To" line — see `Chart_of_Accounts.md`
 2. ✅ `INSUFFICIENT_BUDGET` warns, does not block — surfaces on the Accountant Task Centre
 3. ✅ SSNIT employer/employee % is configurable from day one via `tax_rate_settings` / `GET/PATCH /settings/tax-rates`
 4. ✅ Revenue recognized via Percentage of Completion — Project Completion Assessments are a distinct step, separate from invoicing and cash receipt
-5. ✅ PAYE method — flat-monthly bands, no YTD carry-forward, for Phase One (documented limitation: less accurate for bonuses/irregular pay, deferred to Phase Two if it matters)
-6. ✅ PAYE band sourcing fallback — if the Database Expert has no live web access, it creates the table unseeded and the Instructor sources verified gra.gov.gh figures directly
+5. ✅ PAYE method — flat-monthly bands, no YTD carry-forward, for Phase One
+6. ✅ **PAYE band figures — resolved (v2.1, was previously an open fallback).** Act 1111 (Income Tax Act, 2015, as amended) contains a drafting inconsistency: its seven band widths cumulate to GHS 605,000/year (GHS 50,416.67/month) before the top 35% bracket, but the Act's separately printed final threshold and GRA's summary table state "exceeding GHS 600,000" (GHS 50,000/month). CAREMS adopts the **cumulative band-width interpretation**, consistent with TaxLawGH's published methodology (Ghana Tax Rates guide, PAYE drafting alert, reviewed 21 July 2026), because it avoids an overlap between the 30% and 35% bands that the GHS 600,000 reading would create. The live `paye_tax_bands` table is confirmed correct under this interpretation; `effective_from = 2024-01-01` reflects Act 1111's legal effective date, not the seed date. **This remains a disclosed legislative ambiguity, not a settled point of law** — if GRA issues a formal clarification, the table must be updated and the change logged here.
 7. ✅ Rental invoices carry `rental_contract_id` so they're traceable and distinguishable from project milestone invoices once posted
+8. ✅ **IFRS 16 lessor treatment — new in v2.1.** The company is lessor-only: it rents equipment out to clients and leases nothing in (no leased-in site offices, vehicles, or equipment). All rental contracts are short-term, operating-lease-type arrangements — no contract transfers ownership or approaches the asset's useful life. Under IFRS 16 lessor accounting for operating leases: rental equipment stays capitalized on the company's own books under `1250 Rental Equipment`, continues to depreciate per IAS 16 as normal, and rental income (`4300`/`4310`) must be recognized on a straight-line basis over the rental term rather than fully at invoice date. **Consequence for future work:** the still-unbuilt rental invoicing endpoint (`POST /rentals/:id/invoice` — flagged with no backing RPC function in `CAREMS_Frontend_Engineering_Standard.md`) must implement period-accrual revenue recognition when it is eventually built, not a simple invoice-equals-revenue posting.
+9. ✅ IAS 1 presentation audit scoped as API-9 (v2.1) — see Section 5 above. Findings to be logged as a new decision once complete.
 
-No open policy questions remain.
+No open policy questions remain for v2.1. **Open questions blocking v2.2** (IAS 2, IAS 37, IFRS 9, IAS 12 — provisions, inventory, ECL, deferred tax): (a) the standard defects-liability period used in the company's construction contracts, and (b) whether GRA currently accepts percentage-of-completion for tax-timing purposes or requires a different basis. See `CAREMS_Financial_Statement_Presentation_Standard.md` Section 6 for how these will affect disclosure once resolved.
 
 ---
 
 ## 7. Definition of Done — Phase One
 
-The system is complete when all three end-to-end workflows (INT-1, INT-2, INT-3) run without any manual journal entry:
-1. Quotation → Project → Advance → Completion Assessment → Invoice → Payment → Financial Statements
-2. Payroll Run → Posting → Salary Payment
-3. Supplier Expense → Project Costing → General Ledger
-
-...and the Executive Dashboard reflects all three correctly, in real time, with no discrepancies against the Trial Balance.
+Unchanged from v2.0: the system is complete when INT-1, INT-2, and INT-3 run end-to-end without any manual journal entry, and the Executive Dashboard reflects all three correctly against the Trial Balance in real time.
 
 ---
 
 ## 8. Instructor's operating rule
 
-The Instructor issues each ticket above verbatim to the relevant expert, one phase at a time. It reviews what comes back against that ticket's instruction — not against its own guess at the code — and only advances to the next ticket once the current one is confirmed working. If an expert's output conflicts with this plan, the Instructor updates this document before proceeding, so it never drifts out of sync with what was actually built.
+The Instructor issues each ticket verbatim to the relevant expert, one phase at a time, reviews output against that ticket's instruction, and only advances once confirmed working. If an expert's output conflicts with this plan, the Instructor updates this document before proceeding — this rule was not consistently followed prior to v2.1 (see the live-schema drift noted in `CAREMS_Live_Schema_Reconstructed.sql`, e.g. multi-currency columns, `revenue_account_id`, the `bank_accounts` → `payment_method_type` redesign — none of which were written back into v2.0). That reconciliation is deferred by explicit decision, not overlooked; v2.1 prioritized IFRS correctness over drift cleanup, and drift reconciliation remains an open item for a future version.
+
+---
+
+## 9. Open questions for v2.2 sign-off
+
+1. **Defects/warranty liability period** — the typical retention/defects-liability period specified in this company's construction contracts (commonly 6–12 months post-completion in Ghanaian practice, but must be confirmed against actual contract terms, not assumed). Determines whether the IAS 37 provision account is classified current or non-current.
+2. **GRA construction tax-timing basis** — whether the company currently files corporate tax on a completed-contract, cash, or POC basis. Directly determines the temporary-difference calculation required for IAS 12 deferred tax, and cannot be designed around a guess.

@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
+import { flushSync } from 'react-dom'
 import { useAuth } from '../../context/AuthContext'
 import { companyProfile } from '../../config/companyProfile'
 import { formatMoneyGhs } from '../../lib/formatMoney'
 import { deriveStatusBadgeFromState, StatusBadge } from '../../components/StatusBadge'
-import { fetchMyPayslips, fetchMyEmployeeRecord, type MyEmployeeRecord, type PayslipRecord } from '../../lib/rpc/accountant'
+import { fetchMyPayslips, fetchMyProfile, fetchMyEmployeeRecord, type MyEmployeeRecord, type PayslipRecord } from '../../lib/rpc/accountant'
 import '../../styles/executive-dashboard.css'
 import '../../styles/payslip.css'
 
@@ -45,13 +46,20 @@ export function PayslipsPage() {
   }, [appUser?.email])
 
   useEffect(() => {
-    if (!printTarget) return
-    const timer = window.setTimeout(() => {
-      window.print()
+    function handleAfterPrint() {
       setPrintTarget(null)
-    }, 50)
-    return () => window.clearTimeout(timer)
-  }, [printTarget])
+    }
+
+    window.addEventListener('afterprint', handleAfterPrint)
+    return () => window.removeEventListener('afterprint', handleAfterPrint)
+  }, [])
+
+  function handlePrint(payslip: PayslipRecord) {
+    flushSync(() => {
+      setPrintTarget(payslip)
+    })
+    window.print()
+  }
 
   async function loadPayslips() {
     setLoading(true)
@@ -70,13 +78,20 @@ export function PayslipsPage() {
   }
 
   async function loadEmployee() {
-    const result = await fetchMyEmployeeRecord(appUser?.email ?? undefined)
-    if (!result.ok) {
-      setEmployee(null)
+    // Prefer backend-provided caller-scoped profile. Falls back to legacy lookup only if needed.
+    const profileResult = await fetchMyProfile()
+    if (profileResult.ok) {
+      setEmployee(profileResult.data)
       return
     }
 
-    setEmployee(result.data)
+    // Legacy fallback: try fetchMyEmployeeRecord (may fail due to backend restrictions).
+    const legacy = await fetchMyEmployeeRecord(appUser?.email ?? undefined)
+    if (!legacy.ok) {
+      setEmployee(null)
+      return
+    }
+    setEmployee(legacy.data)
   }
 
   const employeeName = employee?.full_name ?? employee?.email ?? 'Employee'
@@ -107,69 +122,78 @@ export function PayslipsPage() {
           </div>
         </section>
 
-        <div className="payslip-title">PAYSLIP</div>
+        <div className="payslip-title-row">
+          <div>
+            <div className="payslip-title">Payslip</div>
+            <div className="payslip-subtitle">Payroll summary for your current pay period.</div>
+          </div>
+          <div className="payslip-period-card">
+            <span>PAY PERIOD</span>
+            <strong>{formatPayslipPeriod(printTarget.period)}</strong>
+          </div>
+        </div>
 
-        <table className="payslip-info">
-          <tbody>
-            <tr>
-              <th>MONTH</th>
-              <td>{formatPayslipPeriod(printTarget.period)}</td>
-            </tr>
-            <tr>
-              <th>NAME</th>
-              <td>{employeeName}</td>
-            </tr>
-            <tr>
-              <th>DESIGNATION</th>
-              <td>{employeeDesignation}</td>
-            </tr>
-          </tbody>
-        </table>
+        <div className="payslip-summary-grid">
+          <div className="payslip-summary-card">
+            <span>Employee</span>
+            <strong>{employeeName}</strong>
+            <span>{employeeDesignation}</span>
+          </div>
+          <div className="payslip-summary-card">
+            <span>Gross salary</span>
+            <strong>{formatMoneyGhs(grossSalary)}</strong>
+            <span>Net salary</span>
+            <strong>{formatMoneyGhs(Number(printTarget.net_salary ?? 0) || 0)}</strong>
+          </div>
+        </div>
 
-        <div className="payslip-box">
-          <table className="payslip-amounts">
-            <tbody>
-              <tr>
-                <th>GROSS SALARY</th>
-                <td className="payslip-amount">{formatMoneyGhs(grossSalary)}</td>
-              </tr>
-            </tbody>
-          </table>
+        <div className="payslip-columns">
+          <div className="payslip-box">
+            <div className="payslip-box-title">Earnings</div>
+            <table className="payslip-amounts">
+              <tbody>
+                <tr>
+                  <th>Gross salary</th>
+                  <td className="payslip-amount">{formatMoneyGhs(grossSalary)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
 
-          <table className="payslip-amounts">
-            <thead>
-              <tr>
-                <th colSpan={2}>DEDUCTIONS</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <th>P.A.Y.E</th>
-                <td className="payslip-amount">{formatMoneyGhs(Number(printTarget.paye ?? 0) || 0)}</td>
-              </tr>
-              <tr>
-                <th>TIER 1 + 2 (SSNIT){ssnitRate ? ` — ${ssnitRate}` : ''}</th>
-                <td className="payslip-amount">{formatMoneyGhs(ssnitAmount)}</td>
-              </tr>
-              <tr>
-                <th>OTHER DEDUCTIONS</th>
-                <td className="payslip-amount">{formatMoneyGhs(Number(printTarget.other_deductions ?? 0) || 0)}</td>
-              </tr>
-              <tr className="payslip-summary-row">
-                <th>TOTAL DEDUCTIONS</th>
-                <td className="payslip-amount">{formatMoneyGhs(totalDeductions)}</td>
-              </tr>
-            </tbody>
-          </table>
+          <div className="payslip-box">
+            <div className="payslip-box-title">Deductions</div>
+            <table className="payslip-amounts">
+              <tbody>
+                <tr>
+                  <th>P.A.Y.E</th>
+                  <td className="payslip-amount">{formatMoneyGhs(Number(printTarget.paye ?? 0) || 0)}</td>
+                </tr>
+                <tr>
+                  <th>TIER 1 + 2 (SSNIT){ssnitRate ? ` — ${ssnitRate}` : ''}</th>
+                  <td className="payslip-amount">{formatMoneyGhs(ssnitAmount)}</td>
+                </tr>
+                <tr>
+                  <th>Other deductions</th>
+                  <td className="payslip-amount">{formatMoneyGhs(Number(printTarget.other_deductions ?? 0) || 0)}</td>
+                </tr>
+                <tr className="payslip-summary-row">
+                  <th>Total deductions</th>
+                  <td className="payslip-amount">{formatMoneyGhs(totalDeductions)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
 
-          <div className="payslip-net-box">
-            <div className="payslip-net-label">NET SALARY</div>
+        <div className="payslip-net-box">
+          <div>
+            <div className="payslip-net-label">Net pay</div>
             <div className="payslip-net-value">{formatMoneyGhs(Number(printTarget.net_salary ?? 0) || 0)}</div>
           </div>
         </div>
 
-        <div className="payslip-box">
-          <div className="payslip-box-title">Employer Contributions</div>
+        <div className="payslip-box payslip-employer-box">
+          <div className="payslip-box-title">Employer contributions</div>
           <table className="payslip-amounts">
             <tbody>
               <tr>
@@ -184,7 +208,7 @@ export function PayslipsPage() {
   }, [printTarget, employeeName, employeeDesignation])
 
   return (
-    <article className="admin-dashboard">
+    <article className="admin-dashboard payslips-page">
       <header className="admin-dashboard__header">
         <div>
           <p className="admin-dashboard__eyebrow">Employee Self-Service</p>
@@ -233,7 +257,7 @@ export function PayslipsPage() {
               </button>
             </div>
             <div className="table-responsive">
-              <table className="data-table">
+              <table className="data-table payslips-table">
                 <thead>
                   <tr>
                     <th>Period</th>
@@ -266,7 +290,7 @@ export function PayslipsPage() {
                           <button
                             type="button"
                             className="button button--secondary"
-                            onClick={() => setPrintTarget(payslip)}
+                            onClick={() => handlePrint(payslip)}
                             disabled={!employee}
                           >
                             Print
