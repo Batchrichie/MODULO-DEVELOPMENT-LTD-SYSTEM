@@ -694,10 +694,16 @@
 }
 
 /* Screenshot-style pill/rounded inputs: upgrade form-field visuals */
+.form-field {
+  min-width: 0;
+}
+
 .form-field__input,
 .form-field select,
 .form-field input,
 .form-field textarea {
+  width: 100%;
+  min-width: 0;
   border-radius: var(--radius-md);
   padding: 0.875rem 1rem;
   background: var(--color-bg-muted);
@@ -753,6 +759,10 @@
     column-gap: 0;
   }
 
+  .form-field {
+    width: 100%;
+  }
+
   .modal {
     max-width: 100%;
     border-radius: var(--radius-md);
@@ -768,6 +778,10 @@
 
   .modal__body {
     padding: var(--space-lg);
+  }
+
+  .modal__body .form-field {
+    margin-bottom: var(--space-md);
   }
 
   .modal__footer {

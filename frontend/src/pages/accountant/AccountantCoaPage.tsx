@@ -76,10 +76,7 @@ export function AccountantCoaPage() {
   const [form, setForm] = useState<CoaFormState>(emptyForm('Asset'))
   const [submitting, setSubmitting] = useState(false)
   const [activeId, setActiveId] = useState<string | null>(null)
-  const [showModal, _setShowModal] = useState(false)
-  const triggerBtnRef = useRef<HTMLButtonElement | null>(null)
-  const modalOpenedAtRef = useRef<number>(0)
-  const [popoverStyle, setPopoverStyle] = useState<{ left: number; top: number; maxWidth: number }>({ left: 24, top: 140, maxWidth: 640 })
+  const [showModal, setShowModal] = useState(false)
   const [refLoading, setRefLoading] = useState(true)
   const [, setRefError] = useState<string | null>(null)
   const [coaRef, setCoaRef] = useState<CoaReferenceData>({
@@ -87,23 +84,7 @@ export function AccountantCoaPage() {
     account_types: ['Asset', 'Contra-Asset', 'Liability', 'Equity', 'Income', 'Expense'],
     payment_methods: ['Cash', 'Bank', 'MoMo'],
   })
-  function setShowModal(next: boolean) {
-    if (next) {
-      modalOpenedAtRef.current = performance.now()
-      requestAnimationFrame(() => {
-        const rect = triggerBtnRef.current?.getBoundingClientRect()
-        const width = Math.min(640, window.innerWidth - 32)
-        const rightEdge = rect ? rect.left - 8 : window.innerWidth - 8
-        const left = Math.max(8, Math.min(window.innerWidth - width - 8, rightEdge - width))
-        const top = rect ? Math.max(8, Math.min(window.innerHeight - 640, rect.top)) : 140
-        setPopoverStyle({ left, top, maxWidth: width })
-      })
-    }
-    _setShowModal(next)
-  }
-
   function closeModal() {
-    if (performance.now() - modalOpenedAtRef.current < 300) return
     setShowModal(false)
   }
   const [formError, setFormError] = useState<string | null>(null)
@@ -267,7 +248,7 @@ export function AccountantCoaPage() {
           </div>
           <div className="users-card__actions">
             <button type="button" className="button button--secondary" onClick={() => void loadAccounts()}>Refresh</button>
-            <button ref={triggerBtnRef} type="button" className="button button--primary" onClick={() => { setActiveId(null); setForm(emptyForm(coaRef.account_types[0] ?? 'Asset')); setFormError(null); setShowModal(true); setStatusMessage(null) }}>New account</button>
+            <button type="button" className="button button--primary" onClick={() => { setActiveId(null); setForm(emptyForm(coaRef.account_types[0] ?? 'Asset')); setFormError(null); setShowModal(true); setStatusMessage(null) }}>New account</button>
           </div>
         </div>
         {formError && <div className="exec-dash__state-card exec-dash__state-card--error exec-dash__state-card--inline"><h2 className="exec-dash__state-title">Error</h2><p className="exec-dash__state-message">{formError}</p></div>}
@@ -276,12 +257,10 @@ export function AccountantCoaPage() {
         <Modal
           open={showModal}
           onClose={closeModal}
-            title={activeId ? 'Update Account' : 'New account'}
-            subtitle="Create a postable ledger account."
-            maxWidth={popoverStyle.maxWidth}
-            overlayStyle={{ display: 'block', alignItems: 'unset', justifyContent: 'unset', padding: 0, background: 'transparent' }}
-            contentStyle={{ position: 'absolute', left: popoverStyle.left, top: popoverStyle.top, maxWidth: popoverStyle.maxWidth, margin: 0, transform: 'none' }}
-            footer={(
+          title={activeId ? 'Update Account' : 'New account'}
+          subtitle="Create a postable ledger account."
+          maxWidth={640}
+          footer={(
               <>
                 <button type="button" className="button button--secondary" onClick={() => { setShowModal(false); setActiveId(null); setForm(emptyForm(coaRef.account_types[0] ?? 'Asset')) }}>Cancel</button>{' '}
                 <button type="submit" className="button button--primary" disabled={submitting} form="coa-form">
