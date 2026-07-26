@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Modal } from '../../components/Modal'
 import { formatMoneyGhs } from '../../lib/formatMoney'
 import { supabase } from '../../lib/supabase'
 import { unwrapRpcResponse } from '../../lib/common'
@@ -521,49 +522,35 @@ export function PayrollPage() {
         </div>
       </section>
 
-      {showModal && (
-        <div
-          className="modal-overlay"
-          onClick={(event) => {
-            if (event.target !== event.currentTarget) return
-            setShowModal(false)
-          }}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="payroll-modal-title"
-        >
-          <div className="modal">
-            <div className="modal__header">
-              <div className="modal__header-text">
-                <h2 id="payroll-modal-title" className="modal__title">Create payroll run</h2>
-                <p className="modal__subtitle">Generate payslips for all eligible active employees for the selected period.</p>
-              </div>
-              <button type="button" aria-label="Close dialog" className="modal__close" onClick={() => setShowModal(false)}>×</button>
-            </div>
-            <div className="modal__body">
-              {formError && <div className="exec-dash__state-card exec-dash__state-card--error exec-dash__state-card--inline"><h2 className="exec-dash__state-title">Error</h2><p className="exec-dash__state-message">{formError}</p></div>}
-              <div className="form-grid">
-                <label className="form-field form-field--full">
-                  <span className="form-field__label">Period (YYYY-MM)</span>
-                  <input type="month" value={runPeriod} onChange={(event) => setRunPeriod(event.target.value)} required />
-                </label>
-              </div>
-              {blockingEmployees.length > 0 && (
-                <div className="exec-dash__state-card exec-dash__state-card--warning exec-dash__state-card--inline">
-                  <h2 className="exec-dash__state-title">Run will fail — {blockingEmployees.length} employee(s) unclassified</h2>
-                  <p className="exec-dash__state-message">Assign `staff_category` (Project / Admin) to each active employee in Employee Records before creating a run.</p>
-                </div>
-              )}
-            </div>
-            <div className="modal__footer">
-              <button type="button" className="button button--secondary" onClick={() => setShowModal(false)}>Cancel</button>
-              <button type="button" className="button button--primary" onClick={() => { void createRun() }} disabled={submitting || blockingEmployees.length > 0}>
-                {submitting ? 'Creating…' : 'Create run'}
-              </button>
-            </div>
-          </div>
+      <Modal
+        open={showModal}
+        onClose={() => setShowModal(false)}
+        title="Create payroll run"
+        subtitle="Generate payslips for all eligible active employees for the selected period."
+        maxWidth={760}
+        footer={(
+          <>
+            <button type="button" className="button button--secondary" onClick={() => setShowModal(false)}>Cancel</button>
+            <button type="button" className="button button--primary" onClick={() => { void createRun() }} disabled={submitting || blockingEmployees.length > 0}>
+              {submitting ? 'Creating…' : 'Create run'}
+            </button>
+          </>
+        )}
+      >
+        {formError && <div className="exec-dash__state-card exec-dash__state-card--error exec-dash__state-card--inline"><h2 className="exec-dash__state-title">Error</h2><p className="exec-dash__state-message">{formError}</p></div>}
+        <div className="form-grid">
+          <label className="form-field form-field--full">
+            <span className="form-field__label">Period (YYYY-MM)</span>
+            <input type="month" value={runPeriod} onChange={(event) => setRunPeriod(event.target.value)} required />
+          </label>
         </div>
-      )}
+        {blockingEmployees.length > 0 && (
+          <div className="exec-dash__state-card exec-dash__state-card--warning exec-dash__state-card--inline">
+            <h2 className="exec-dash__state-title">Run will fail — {blockingEmployees.length} employee(s) unclassified</h2>
+            <p className="exec-dash__state-message">Assign `staff_category` (Project / Admin) to each active employee in Employee Records before creating a run.</p>
+          </div>
+        )}
+      </Modal>
 
       <ConfirmDialog
         open={!!approveTarget}

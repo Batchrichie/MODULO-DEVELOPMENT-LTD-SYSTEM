@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { Modal } from '../../components/Modal'
 import { formatMoneyGhs } from '../../lib/formatMoney'
 import {
   createAccount,
@@ -78,7 +79,7 @@ export function AccountantCoaPage() {
   const [showModal, _setShowModal] = useState(false)
   const triggerBtnRef = useRef<HTMLButtonElement | null>(null)
   const modalOpenedAtRef = useRef<number>(0)
-  const [popoverStyle, setPopoverStyle] = useState<{ left: number; top: number; maxWidth: number }>({ left: 24, top: 140, maxWidth: 960 })
+  const [popoverStyle, setPopoverStyle] = useState<{ left: number; top: number; maxWidth: number }>({ left: 24, top: 140, maxWidth: 640 })
   const [refLoading, setRefLoading] = useState(true)
   const [, setRefError] = useState<string | null>(null)
   const [coaRef, setCoaRef] = useState<CoaReferenceData>({
@@ -91,7 +92,7 @@ export function AccountantCoaPage() {
       modalOpenedAtRef.current = performance.now()
       requestAnimationFrame(() => {
         const rect = triggerBtnRef.current?.getBoundingClientRect()
-        const width = Math.min(960, window.innerWidth - 32)
+        const width = Math.min(640, window.innerWidth - 32)
         const rightEdge = rect ? rect.left - 8 : window.innerWidth - 8
         const left = Math.max(8, Math.min(window.innerWidth - width - 8, rightEdge - width))
         const top = rect ? Math.max(8, Math.min(window.innerHeight - 640, rect.top)) : 140
@@ -99,6 +100,11 @@ export function AccountantCoaPage() {
       })
     }
     _setShowModal(next)
+  }
+
+  function closeModal() {
+    if (performance.now() - modalOpenedAtRef.current < 300) return
+    setShowModal(false)
   }
   const [formError, setFormError] = useState<string | null>(null)
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
@@ -203,8 +209,8 @@ export function AccountantCoaPage() {
     return (
       <div className="exec-dash__panel">
         <div className="exec-dash__panel-title">Account registry</div>
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <div className="table-wrapper">
+          <table className="data-table">
             <thead>
               <tr>
                 <th style={{ textAlign: 'left', padding: '0.5rem' }}>Code</th>
@@ -264,125 +270,116 @@ export function AccountantCoaPage() {
             <button ref={triggerBtnRef} type="button" className="button button--primary" onClick={() => { setActiveId(null); setForm(emptyForm(coaRef.account_types[0] ?? 'Asset')); setFormError(null); setShowModal(true); setStatusMessage(null) }}>New account</button>
           </div>
         </div>
-        <div className="exec-dash__row">
-          <div className="exec-dash__panel">
-            {formError && <div className="exec-dash__state-card exec-dash__state-card--error exec-dash__state-card--inline"><h2 className="exec-dash__state-title">Error</h2><p className="exec-dash__state-message">{formError}</p></div>}
-            {statusMessage && <div className="exec-dash__state-card exec-dash__state-card--success exec-dash__state-card--inline"><h2 className="exec-dash__state-title">Success</h2><p className="exec-dash__state-message">{statusMessage}</p></div>}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ fontWeight: 600 }}>{/* Placeholder left panel actions */}</div>
-              <div />
-            </div>
-          </div>
-          {content()}
-        </div>
-          {showModal && (
-            <div className="modal-overlay" style={{ display: 'block', alignItems: 'unset', justifyContent: 'unset', padding: 0, background: 'transparent' }} onClick={(e) => { if (e.target !== e.currentTarget) return; if (performance.now() - modalOpenedAtRef.current < 300) return; setShowModal(false) }} role="dialog" aria-modal="true">
-              <div className="modal" style={{ position: 'absolute', left: popoverStyle.left, top: popoverStyle.top, maxWidth: popoverStyle.maxWidth, margin: 0, transform: 'none' }}>
-                <div className="modal__header">
-                  <div className="modal__header-text">
-                    <h2 className="modal__title">{activeId ? 'Update Account' : 'New account'}</h2>
-                    <p className="modal__subtitle">Create a postable ledger account.</p>
-                  </div>
-                  <button type="button" aria-label="Close dialog" className="modal__close" onClick={() => setShowModal(false)}>×</button>
-                </div>
-                <form onSubmit={(event) => void handleSubmit(event)}>
-                  <div className="modal__body">
-                    {formError && <div className="exec-dash__state-card exec-dash__state-card--error exec-dash__state-card--inline"><h2 className="exec-dash__state-title">Error</h2><p className="exec-dash__state-message">{formError}</p></div>}
-                    <div className="form-grid">
-                      <label className="form-field">
-                        <span className="form-field__label">Account code</span>
-                        <input
-                          value={form.code}
-                          placeholder={suggestedCodePlaceholder}
-                          onChange={(event) => setForm((current) => ({ ...current, code: event.target.value }))}
-                          style={{ display: 'block', width: '100%', marginTop: '0.25rem', minHeight: '2.75rem' }}
-                        />
-                      </label>
-                      <label className="form-field">
-                        <span className="form-field__label">Account type</span>
-                        <select
-                          value={form.type}
-                          onChange={(event) => setForm((current) => ({ ...current, type: event.target.value }))}
-                          required
-                          style={{ display: 'block', width: '100%', marginTop: '0.25rem', minHeight: '2.75rem' }}
-                        >
-                          {coaRef.account_types.map((typeOption) => (
-                            <option key={typeOption} value={typeOption}>{typeOption}</option>
-                          ))}
-                        </select>
-                      </label>
-                      <label className="form-field" style={{ gridColumn: '1 / -1' }}>
-                        <span className="form-field__label">Account name</span>
-                        <input
-                          value={form.name}
-                          placeholder="e.g. Petty Cash"
-                          onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
-                          required
-                          style={{ display: 'block', width: '100%', marginTop: '0.25rem', minHeight: '2.75rem' }}
-                        />
-                      </label>
-                      <label className="form-field">
-                        <span className="form-field__label">Reporting group</span>
-                        <select
-                          value={form.reporting_group}
-                          onChange={(event) => setForm((current) => ({ ...current, reporting_group: event.target.value }))}
-                          required
-                          style={{ display: 'block', width: '100%', marginTop: '0.25rem', minHeight: '2.75rem' }}
-                        >
-                          <option value="">
-                            {refLoading && coaRef.reporting_groups.length === 0
-                              ? 'Loading reference data…'
-                              : 'Select a reporting group…'}
-                          </option>
-                          {coaRef.reporting_groups.map((row) => (
-                            <option key={row.reporting_group} value={row.reporting_group}>
-                              {row.reporting_group} ({row.range_start}-{row.range_end})
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                      <label className="form-field">
-                        <span className="form-field__label">Payment method (optional)</span>
-                        <select
-                          value={form.payment_method_type}
-                          onChange={(event) => setForm((current) => ({ ...current, payment_method_type: event.target.value }))}
-                          style={{ display: 'block', width: '100%', marginTop: '0.25rem', minHeight: '2.75rem' }}
-                        >
-                          <option value={PAYMENT_METHOD_NONE_SENTINEL}>Not a payment account</option>
-                          {coaRef.payment_methods.map((pm) => (
-                            <option key={pm} value={pm}>
-                              {PAYMENT_METHOD_DISPLAY[pm] ?? pm}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                      <label className="form-field" style={{ gridColumn: '1 / -1' }}>
-                        <span className="form-field__label">Provider / account number (optional)</span>
-                        <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.25rem' }}>
-                          <input
-                            value={form.provider_name}
-                            placeholder="e.g. GCB"
-                            onChange={(event) => setForm((current) => ({ ...current, provider_name: event.target.value }))}
-                            style={{ flex: 1, minHeight: '2.75rem' }}
-                          />
-                          <input
-                            value={form.account_number}
-                            placeholder="e.g. 0123456789"
-                            onChange={(event) => setForm((current) => ({ ...current, account_number: event.target.value }))}
-                            style={{ flex: 1, minHeight: '2.75rem' }}
-                          />
-                        </div>
-                      </label>
-                    </div>
-                  </div>
-                  <div className="modal__footer">
-                    <button type="button" className="button button--secondary" onClick={() => { setShowModal(false); setActiveId(null); setForm(emptyForm(coaRef.account_types[0] ?? 'Asset')) }}>Cancel</button>{' '}
-                    <button type="submit" className="button button--primary" disabled={submitting}>{submitting ? 'Saving…' : activeId ? 'Save changes' : 'Save account'}</button>
-                  </div>
-                </form>
-              </div>
-              </div>
+        {formError && <div className="exec-dash__state-card exec-dash__state-card--error exec-dash__state-card--inline"><h2 className="exec-dash__state-title">Error</h2><p className="exec-dash__state-message">{formError}</p></div>}
+        {statusMessage && <div className="exec-dash__state-card exec-dash__state-card--success exec-dash__state-card--inline"><h2 className="exec-dash__state-title">Success</h2><p className="exec-dash__state-message">{statusMessage}</p></div>}
+        {content()}
+        <Modal
+          open={showModal}
+          onClose={closeModal}
+            title={activeId ? 'Update Account' : 'New account'}
+            subtitle="Create a postable ledger account."
+            maxWidth={popoverStyle.maxWidth}
+            overlayStyle={{ display: 'block', alignItems: 'unset', justifyContent: 'unset', padding: 0, background: 'transparent' }}
+            contentStyle={{ position: 'absolute', left: popoverStyle.left, top: popoverStyle.top, maxWidth: popoverStyle.maxWidth, margin: 0, transform: 'none' }}
+            footer={(
+              <>
+                <button type="button" className="button button--secondary" onClick={() => { setShowModal(false); setActiveId(null); setForm(emptyForm(coaRef.account_types[0] ?? 'Asset')) }}>Cancel</button>{' '}
+                <button type="submit" className="button button--primary" disabled={submitting} form="coa-form">
+                  {submitting ? 'Saving…' : activeId ? 'Save changes' : 'Save account'}
+                </button>
+              </>
             )}
+          >
+            <form id="coa-form" onSubmit={(event) => void handleSubmit(event)}>
+              {formError && <div className="exec-dash__state-card exec-dash__state-card--error exec-dash__state-card--inline"><h2 className="exec-dash__state-title">Error</h2><p className="exec-dash__state-message">{formError}</p></div>}
+              <div className="form-grid">
+                <label className="form-field">
+                  <span className="form-field__label">Account code</span>
+                  <input
+                    value={form.code}
+                    placeholder={suggestedCodePlaceholder}
+                    onChange={(event) => setForm((current) => ({ ...current, code: event.target.value }))}
+                    style={{ display: 'block', width: '100%', marginTop: '0.25rem', minHeight: '2.75rem' }}
+                  />
+                </label>
+                <label className="form-field">
+                  <span className="form-field__label">Account type</span>
+                  <select
+                    value={form.type}
+                    onChange={(event) => setForm((current) => ({ ...current, type: event.target.value }))}
+                    required
+                    style={{ display: 'block', width: '100%', marginTop: '0.25rem', minHeight: '2.75rem' }}
+                  >
+                    {coaRef.account_types.map((typeOption) => (
+                      <option key={typeOption} value={typeOption}>{typeOption}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="form-field" style={{ gridColumn: '1 / -1' }}>
+                  <span className="form-field__label">Account name</span>
+                  <input
+                    value={form.name}
+                    placeholder="e.g. Petty Cash"
+                    onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
+                    required
+                    style={{ display: 'block', width: '100%', marginTop: '0.25rem', minHeight: '2.75rem' }}
+                  />
+                </label>
+                <label className="form-field">
+                  <span className="form-field__label">Reporting group</span>
+                  <select
+                    value={form.reporting_group}
+                    onChange={(event) => setForm((current) => ({ ...current, reporting_group: event.target.value }))}
+                    required
+                    style={{ display: 'block', width: '100%', marginTop: '0.25rem', minHeight: '2.75rem' }}
+                  >
+                    <option value="">
+                      {refLoading && coaRef.reporting_groups.length === 0
+                        ? 'Loading reference data…'
+                        : 'Select a reporting group…'}
+                    </option>
+                    {coaRef.reporting_groups.map((row) => (
+                      <option key={row.reporting_group} value={row.reporting_group}>
+                        {row.reporting_group} ({row.range_start}-{row.range_end})
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="form-field">
+                  <span className="form-field__label">Payment method (optional)</span>
+                  <select
+                    value={form.payment_method_type}
+                    onChange={(event) => setForm((current) => ({ ...current, payment_method_type: event.target.value }))}
+                    style={{ display: 'block', width: '100%', marginTop: '0.25rem', minHeight: '2.75rem' }}
+                  >
+                    <option value={PAYMENT_METHOD_NONE_SENTINEL}>Not a payment account</option>
+                    {coaRef.payment_methods.map((pm) => (
+                      <option key={pm} value={pm}>
+                        {PAYMENT_METHOD_DISPLAY[pm] ?? pm}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="form-field" style={{ gridColumn: '1 / -1' }}>
+                  <span className="form-field__label">Provider / account number (optional)</span>
+                  <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.25rem' }}>
+                    <input
+                      value={form.provider_name}
+                      placeholder="e.g. GCB"
+                      onChange={(event) => setForm((current) => ({ ...current, provider_name: event.target.value }))}
+                      style={{ flex: 1, minHeight: '2.75rem' }}
+                    />
+                    <input
+                      value={form.account_number}
+                      placeholder="e.g. 0123456789"
+                      onChange={(event) => setForm((current) => ({ ...current, account_number: event.target.value }))}
+                      style={{ flex: 1, minHeight: '2.75rem' }}
+                    />
+                  </div>
+                </label>
+              </div>
+            </form>
+          </Modal>
         </section>
     </article>
   )

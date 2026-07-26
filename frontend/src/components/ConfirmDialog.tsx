@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom'
 import { useEffect, useState } from 'react'
 import '../styles/executive-dashboard.css'
 
@@ -74,7 +75,7 @@ export function ConfirmDialog({
     }
   }
 
-  return (
+  return createPortal(
     <div
       className="modal-overlay"
       onClick={(event) => {
@@ -132,6 +133,7 @@ export function ConfirmDialog({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

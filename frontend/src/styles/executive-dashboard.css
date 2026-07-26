@@ -417,6 +417,8 @@
 /* Data tables (CoA registry, Trial Balance rows) — consistent + scrollable wrapper */
 .table-wrapper {
   overflow-x: auto;
+  overflow-y: auto;
+  max-height: min(60vh, calc(100vh - 24rem));
   border-radius: var(--radius-sm);
   border: 1px solid var(--color-border);
 }

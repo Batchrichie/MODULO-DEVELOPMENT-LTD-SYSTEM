@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { createRecord, getRecords, updateRecord } from '../../lib/rpc/accountant'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
+import { Modal } from '../../components/Modal'
 import { EmptyState } from '../../components/EmptyState'
 import { SearchField } from '../../components/SearchField'
 import { deriveStatusBadgeFromState, StatusBadge } from '../../components/StatusBadge'
@@ -305,158 +306,124 @@ export function EmployeeRecordsPage() {
         </div>
       </section>
 
-      {showModal && (
-        <div
-          className="modal-overlay"
-          onClick={(event) => {
-            if (event.target !== event.currentTarget) return
-            setShowModal(false)
-            setActiveId(null)
-            setForm(emptyForm())
-          }}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="emp-modal-title"
-        >
-          <div className="modal">
-            <div className="modal__header">
-              <div className="modal__header-text">
-                <h2 id="emp-modal-title" className="modal__title">{activeId ? 'Update employee' : 'New employee'}</h2>
-                <p className="modal__subtitle">{activeId ? 'Update an existing employee record.' : 'Onboard a new employee into the payroll roster.'}</p>
-              </div>
-              <button
-                type="button"
-                aria-label="Close dialog"
-                className="modal__close"
-                onClick={() => { setShowModal(false); setActiveId(null); setForm(emptyForm()) }}
-              >
-                ×
-              </button>
-            </div>
-            <form onSubmit={(event) => void handleSubmit(event)}>
-              <div className="modal__body">
-                {formError && <div className="exec-dash__state-card exec-dash__state-card--error exec-dash__state-card--inline"><h2 className="exec-dash__state-title">Error</h2><p className="exec-dash__state-message">{formError}</p></div>}
-                <div className="form-grid">
-                  <label className="form-field form-field--full">
-                    <span className="form-field__label">Full name</span>
-                    <input
-                      value={form.full_name}
-                      placeholder="e.g. Ama Serwaa"
-                      onChange={(event) => setForm((current) => ({ ...current, full_name: event.target.value }))}
-                      required
-                    />
-                  </label>
-                  <label className="form-field">
-                    <span className="form-field__label">Email</span>
-                    <input
-                      type="email"
-                      value={form.email}
-                      placeholder="ama@example.com"
-                      onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))}
-                      required
-                    />
-                  </label>
-                  <label className="form-field">
-                    <span className="form-field__label">Phone</span>
-                    <input
-                      value={form.phone}
-                      placeholder="e.g. +233 24 000 0000"
-                      onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))}
-                    />
-                  </label>
-                  <label className="form-field">
-                    <span className="form-field__label">Employment status</span>
-                    <select value={form.employment_status} onChange={(event) => setForm((current) => ({ ...current, employment_status: event.target.value as 'Active' | 'Terminated' }))} required>
-                      <option value="Active">Active</option>
-                      <option value="Terminated">Terminated</option>
-                    </select>
-                  </label>
-                  <label className="form-field">
-                    <span className="form-field__label">Staff category</span>
-                    <select value={form.staff_category} onChange={(event) => setForm((current) => ({ ...current, staff_category: event.target.value as 'Project' | 'Admin' | '' }))}>
-                      <option value="">Select category</option>
-                      <option value="Project">Project</option>
-                      <option value="Admin">Admin</option>
-                    </select>
-                  </label>
-                </div>
-              </div>
-              <div className="modal__footer">
-                <button type="button" className="button button--secondary" onClick={() => { setShowModal(false); setActiveId(null); setForm(emptyForm()) }}>Cancel</button>
-                <button type="submit" className="button button--primary" disabled={submitting}>{submitting ? 'Saving…' : activeId ? 'Save changes' : 'Create employee'}</button>
-              </div>
-            </form>
+      <Modal
+        open={showModal}
+        onClose={() => { setShowModal(false); setActiveId(null); setForm(emptyForm()) }}
+        title={activeId ? 'Update employee' : 'New employee'}
+        subtitle={activeId ? 'Update an existing employee record.' : 'Onboard a new employee into the payroll roster.'}
+        maxWidth={760}
+        footer={(
+          <>
+            <button type="button" className="button button--secondary" onClick={() => { setShowModal(false); setActiveId(null); setForm(emptyForm()) }}>Cancel</button>
+            <button type="submit" className="button button--primary" disabled={submitting} form="employee-form">
+              {submitting ? 'Saving…' : activeId ? 'Save changes' : 'Create employee'}
+            </button>
+          </>
+        )}
+      >
+        <form id="employee-form" onSubmit={(event) => void handleSubmit(event)}>
+          {formError && <div className="exec-dash__state-card exec-dash__state-card--error exec-dash__state-card--inline"><h2 className="exec-dash__state-title">Error</h2><p className="exec-dash__state-message">{formError}</p></div>}
+          <div className="form-grid">
+            <label className="form-field form-field--full">
+              <span className="form-field__label">Full name</span>
+              <input
+                value={form.full_name}
+                placeholder="e.g. Ama Serwaa"
+                onChange={(event) => setForm((current) => ({ ...current, full_name: event.target.value }))}
+                required
+              />
+            </label>
+            <label className="form-field">
+              <span className="form-field__label">Email</span>
+              <input
+                type="email"
+                value={form.email}
+                placeholder="ama@example.com"
+                onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))}
+                required
+              />
+            </label>
+            <label className="form-field">
+              <span className="form-field__label">Phone</span>
+              <input
+                value={form.phone}
+                placeholder="e.g. +233 24 000 0000"
+                onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))}
+              />
+            </label>
+            <label className="form-field">
+              <span className="form-field__label">Employment status</span>
+              <select value={form.employment_status} onChange={(event) => setForm((current) => ({ ...current, employment_status: event.target.value as 'Active' | 'Terminated' }))} required>
+                <option value="Active">Active</option>
+                <option value="Terminated">Terminated</option>
+              </select>
+            </label>
+            <label className="form-field">
+              <span className="form-field__label">Staff category</span>
+              <select value={form.staff_category} onChange={(event) => setForm((current) => ({ ...current, staff_category: event.target.value as 'Project' | 'Admin' | '' }))}>
+                <option value="">Select category</option>
+                <option value="Project">Project</option>
+                <option value="Admin">Admin</option>
+              </select>
+            </label>
           </div>
-        </div>
-      )}
+        </form>
+      </Modal>
 
-      {viewingEmployee && (
-        <div
-          className="modal-overlay"
-          onClick={(event) => {
-            if (event.target !== event.currentTarget) return
-            setViewingEmployee(null)
-          }}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="emp-view-title"
-        >
-          <div className="modal">
-            <div className="modal__header">
-              <div className="modal__header-text">
-                <h2 id="emp-view-title" className="modal__title">Employee details</h2>
-                <p className="modal__subtitle">Read-only view — use Edit to make changes.</p>
-              </div>
-              <button type="button" aria-label="Close dialog" className="modal__close" onClick={() => setViewingEmployee(null)}>×</button>
+      <Modal
+        open={!!viewingEmployee}
+        onClose={() => setViewingEmployee(null)}
+        title="Employee details"
+        subtitle="Read-only view — use Edit to make changes."
+        maxWidth={760}
+        footer={(
+          <>
+            <button type="button" className="button button--secondary" onClick={() => setViewingEmployee(null)}>Close</button>
+            <button
+              type="button"
+              className="button button--primary"
+              onClick={() => {
+                const e = viewingEmployee
+                if (!e) return
+                setActiveId(e.employee_id ?? e.id ?? null)
+                setForm({
+                  full_name: e.full_name ?? '',
+                  email: e.email ?? '',
+                  phone: e.phone ?? '',
+                  employment_status: (e.employment_status as 'Active' | 'Terminated') ?? 'Active',
+                  staff_category: (e.staff_category as 'Project' | 'Admin' | '') ?? '',
+                })
+                setViewingEmployee(null)
+                setShowModal(true)
+              }}
+            >
+              Edit employee
+            </button>
+          </>
+        )}
+      >
+        <div className="form-grid">
+          <label className="form-field form-field--full"><span className="form-field__label">Full name</span><input value={viewingEmployee?.full_name ?? ''} readOnly /></label>
+          <label className="form-field"><span className="form-field__label">Email</span><input value={viewingEmployee?.email ?? ''} readOnly /></label>
+          <label className="form-field"><span className="form-field__label">Phone</span><input value={viewingEmployee?.phone ?? ''} readOnly /></label>
+          <label className="form-field"><span className="form-field__label">Employment status</span>
+            <div style={{ padding: '0.875rem 1rem' }}>
+              <StatusBadge
+                label={viewingEmployee?.employment_status ?? 'Unknown'}
+                tone={deriveStatusBadgeFromState(viewingEmployee?.employment_status ?? 'Unknown').tone}
+              />
             </div>
-            <div className="modal__body">
-              <div className="form-grid">
-                <label className="form-field form-field--full"><span className="form-field__label">Full name</span><input value={viewingEmployee.full_name ?? ''} readOnly /></label>
-                <label className="form-field"><span className="form-field__label">Email</span><input value={viewingEmployee.email ?? ''} readOnly /></label>
-                <label className="form-field"><span className="form-field__label">Phone</span><input value={viewingEmployee.phone ?? ''} readOnly /></label>
-                <label className="form-field"><span className="form-field__label">Employment status</span>
-                  <div style={{ padding: '0.875rem 1rem' }}>
-                    <StatusBadge
-                      label={viewingEmployee.employment_status ?? 'Unknown'}
-                      tone={deriveStatusBadgeFromState(viewingEmployee.employment_status ?? 'Unknown').tone}
-                    />
-                  </div>
-                </label>
-                <label className="form-field"><span className="form-field__label">Staff category</span>
-                  <div style={{ padding: '0.875rem 1rem' }}>
-                    <StatusBadge
-                      label={viewingEmployee.staff_category ?? 'Unclassified'}
-                      tone={viewingEmployee.staff_category ? 'info' : 'muted'}
-                    />
-                  </div>
-                </label>
-              </div>
+          </label>
+          <label className="form-field"><span className="form-field__label">Staff category</span>
+            <div style={{ padding: '0.875rem 1rem' }}>
+              <StatusBadge
+                label={viewingEmployee?.staff_category ?? 'Unclassified'}
+                tone={viewingEmployee?.staff_category ? 'info' : 'muted'}
+              />
             </div>
-            <div className="modal__footer">
-              <button type="button" className="button button--secondary" onClick={() => setViewingEmployee(null)}>Close</button>
-              <button
-                type="button"
-                className="button button--primary"
-                onClick={() => {
-                  const e = viewingEmployee
-                  setActiveId(e.employee_id ?? e.id ?? null)
-                  setForm({
-                    full_name: e.full_name ?? '',
-                    email: e.email ?? '',
-                    phone: e.phone ?? '',
-                    employment_status: (e.employment_status as 'Active' | 'Terminated') ?? 'Active',
-                    staff_category: (e.staff_category as 'Project' | 'Admin' | '') ?? '',
-                  })
-                  setViewingEmployee(null)
-                  setShowModal(true)
-                }}
-              >
-                Edit employee
-              </button>
-            </div>
-          </div>
+          </label>
         </div>
-      )}
+      </Modal>
 
       <ConfirmDialog
         open={!!terminateTarget}

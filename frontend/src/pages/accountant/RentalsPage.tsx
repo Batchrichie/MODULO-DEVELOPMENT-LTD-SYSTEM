@@ -5,6 +5,7 @@ import { SearchField } from '../../components/SearchField'
 import { deriveStatusBadgeFromState, StatusBadge } from '../../components/StatusBadge'
 import { formatMoneyGhs } from '../../lib/formatMoney'
 import {
+  fetchRentalContracts,
   fetchTaxRates,
   getRecords,
   normalizeTaxRates,
@@ -67,7 +68,7 @@ export function RentalsPage() {
 
     const [equipmentResult, contractsResult, taxResult] = await Promise.all([
       getRecords<EquipmentRecord[]>('equipment', 1, 100),
-      getRecords<RentalContract[]>('rental_contracts', 1, 100),
+      fetchRentalContracts(),
       fetchTaxRates(),
     ])
 
@@ -81,11 +82,11 @@ export function RentalsPage() {
     if (contractsResult.ok) {
       setContracts(contractsResult.data)
       if (!contractsResult.data.length) {
-        setContractsNote('No rental contracts are currently available from the backend list, so the selector will remain empty until a contract exists.')
+        setContractsNote('No rental contracts were returned by the backend list. If you expected contracts, verify that contracts exist and that the backend contract RPC is available.')
       }
     } else {
       setContracts([])
-      setContractsNote(`Rental contract lookup is backend-dependent in this environment: ${contractsResult.error}`)
+      setContractsNote(`Rental contract lookup failed: ${contractsResult.error}`)
     }
 
     if (taxResult.ok) {

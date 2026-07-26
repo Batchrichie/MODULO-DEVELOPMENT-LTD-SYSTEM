@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Modal } from '../../components/Modal'
 import { formatMoneyGhs } from '../../lib/formatMoney'
 import { paymentMadeCreate } from '../../lib/rpc/accountant'
 import { supabase } from '../../lib/supabase'
@@ -176,74 +177,71 @@ export function SupplierPaymentsPage() {
             </div>
             <div className="exec-dash__state-card exec-dash__state-card--empty"><h2 className="exec-dash__state-title">Recent payments hidden</h2><p className="exec-dash__state-message">Recent payments list removed from this view.</p></div>
 
-            {showModal && (
-              <div className="modal-overlay" onClick={(event) => { if (event.target !== event.currentTarget) return; setShowModal(false) }} role="dialog" aria-modal="true">
-                <div className="modal">
-                  <div className="modal__header">
-                    <div className="modal__header-text">
-                      <h2 className="modal__title">Record Supplier Payment</h2>
-                      <p className="modal__subtitle">Post a payment to a supplier and trigger automatic journal entries.</p>
-                    </div>
-                    <button type="button" aria-label="Close dialog" className="modal__close" onClick={() => setShowModal(false)}>×</button>
-                  </div>
-                  <form onSubmit={(event) => void handleSubmit(event)}>
-                    <div className="modal__body">
-                      {formError && <div className="exec-dash__state-card exec-dash__state-card--error exec-dash__state-card--inline"><h2 className="exec-dash__state-title">Error</h2><p className="exec-dash__state-message">{formError}</p></div>}
-                      <div className="form-grid">
-                        <label className="form-field">
-                          <span className="form-field__label">Supplier *</span>
-                          <select
-                            value={form.supplier_id}
-                            onChange={(event) => setForm((current) => ({ ...current, supplier_id: event.target.value }))}
-                            required
-                          >
-                            <option value="">Select a supplier</option>
-                            {suppliers.map((supplier) => (
-                              <option key={supplier.supplier_id || supplier.id} value={supplier.supplier_id || supplier.id}>
-                                {supplier.name || supplier.supplier_name || '—'}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
+            <Modal
+              open={showModal}
+              onClose={() => setShowModal(false)}
+              title="Record Supplier Payment"
+              subtitle="Post a payment to a supplier and trigger automatic journal entries."
+              maxWidth={760}
+              footer={(
+                <>
+                  <button type="button" className="button button--secondary" onClick={() => setShowModal(false)}>Cancel</button>{' '}
+                  <button type="submit" className="button button--primary" disabled={submitting} form="supplier-payment-form">
+                    {submitting ? 'Recording Payment...' : 'Record Payment'}
+                  </button>
+                </>
+              )}
+            >
+              <form id="supplier-payment-form" onSubmit={(event) => void handleSubmit(event)}>
+                {formError && <div className="exec-dash__state-card exec-dash__state-card--error exec-dash__state-card--inline"><h2 className="exec-dash__state-title">Error</h2><p className="exec-dash__state-message">{formError}</p></div>}
+                <div className="form-grid">
+                  <label className="form-field">
+                    <span className="form-field__label">Supplier *</span>
+                    <select
+                      value={form.supplier_id}
+                      onChange={(event) => setForm((current) => ({ ...current, supplier_id: event.target.value }))}
+                      required
+                    >
+                      <option value="">Select a supplier</option>
+                      {suppliers.map((supplier) => (
+                        <option key={supplier.supplier_id || supplier.id} value={supplier.supplier_id || supplier.id}>
+                          {supplier.name || supplier.supplier_name || '—'}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
 
-                        <label className="form-field">
-                          <span className="form-field__label">Amount *</span>
-                          <input
-                            type="number"
-                            placeholder="0.00"
-                            value={form.amount}
-                            onChange={(event) => setForm((current) => ({ ...current, amount: event.target.value }))}
-                            step="0.01"
-                            min="0"
-                            required
-                          />
-                        </label>
+                  <label className="form-field">
+                    <span className="form-field__label">Amount *</span>
+                    <input
+                      type="number"
+                      placeholder="0.00"
+                      value={form.amount}
+                      onChange={(event) => setForm((current) => ({ ...current, amount: event.target.value }))}
+                      step="0.01"
+                      min="0"
+                      required
+                    />
+                  </label>
 
-                        <label className="form-field form-field--full">
-                          <span className="form-field__label">Settlement account *</span>
-                          <select
-                            value={form.settlement_account_id}
-                            onChange={(event) => setForm((current) => ({ ...current, settlement_account_id: event.target.value }))}
-                            required
-                          >
-                            <option value="">Select settlement account</option>
-                            {settlementAccounts.map((account) => (
-                              <option key={account.account_id || account.id} value={account.account_id || account.id}>
-                                {account.name || 'Unnamed account'} ({account.payment_method_type || 'Unknown'})
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                      </div>
-                    </div>
-                    <div className="modal__footer">
-                      <button type="button" className="button button--secondary" onClick={() => setShowModal(false)}>Cancel</button>{' '}
-                      <button type="submit" className="button button--primary" disabled={submitting}>{submitting ? 'Recording Payment...' : 'Record Payment'}</button>
-                    </div>
-                  </form>
+                  <label className="form-field form-field--full">
+                    <span className="form-field__label">Settlement account *</span>
+                    <select
+                      value={form.settlement_account_id}
+                      onChange={(event) => setForm((current) => ({ ...current, settlement_account_id: event.target.value }))}
+                      required
+                    >
+                      <option value="">Select settlement account</option>
+                      {settlementAccounts.map((account) => (
+                        <option key={account.account_id || account.id} value={account.account_id || account.id}>
+                          {account.name || 'Unnamed account'} ({account.payment_method_type || 'Unknown'})
+                        </option>
+                      ))}
+                    </select>
+                  </label>
                 </div>
-              </div>
-            )}
+              </form>
+            </Modal>
           </div>
         </div>
       </section>

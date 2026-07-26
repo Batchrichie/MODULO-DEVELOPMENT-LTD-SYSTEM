@@ -1,4 +1,5 @@
-import { useEffect, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
+import { useEffect, type CSSProperties, type ReactNode } from 'react'
 
 interface ModalProps {
   open: boolean
@@ -9,6 +10,8 @@ interface ModalProps {
   footer?: ReactNode
   maxWidth?: number | string
   labelledById?: string
+  overlayStyle?: CSSProperties
+  contentStyle?: CSSProperties
 }
 
 export function Modal({
@@ -20,6 +23,8 @@ export function Modal({
   footer,
   maxWidth,
   labelledById,
+  overlayStyle,
+  contentStyle,
 }: ModalProps) {
   useEffect(() => {
     if (!open) return
@@ -38,11 +43,15 @@ export function Modal({
   if (!open) return null
 
   const titleId = labelledById ?? 'modal-title'
-  const contentStyle = maxWidth !== undefined ? { maxWidth } : undefined
+  const resolvedContentStyle = {
+    ...(maxWidth !== undefined ? { maxWidth } : {}),
+    ...(contentStyle ?? {}),
+  }
 
-  return (
+  return createPortal(
     <div
       className="modal-overlay"
+      style={overlayStyle}
       onClick={(event) => {
         if (event.target !== event.currentTarget) return
         onClose()
@@ -51,7 +60,7 @@ export function Modal({
       aria-modal="true"
       aria-labelledby={titleId}
     >
-      <div className="modal" style={contentStyle}>
+      <div className="modal" style={resolvedContentStyle}>
         <div className="modal__header">
           <div className="modal__header-text">
             <h2 id={titleId} className="modal__title">
@@ -71,6 +80,7 @@ export function Modal({
         <div className="modal__body">{children}</div>
         {footer && <div className="modal__footer">{footer}</div>}
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

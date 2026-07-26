@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Modal } from '../../components/Modal'
 import { formatMoneyGhs } from '../../lib/formatMoney'
 import { expenseCreate, fetchAccounts } from '../../lib/rpc/accountant'
 import { supabase } from '../../lib/supabase'
@@ -201,107 +202,104 @@ export function ExpensesPage() {
             </div>
             <div className="exec-dash__state-card exec-dash__state-card--empty"><h2 className="exec-dash__state-title">Recent expenses hidden</h2><p className="exec-dash__state-message">Recent expenses list removed from this view.</p></div>
 
-            {showModal && (
-              <div className="modal-overlay" onClick={(event) => { if (event.target !== event.currentTarget) return; setShowModal(false) }} role="dialog" aria-modal="true">
-                <div className="modal">
-                  <div className="modal__header">
-                    <div className="modal__header-text">
-                      <h2 className="modal__title">Create Expense</h2>
-                      <p className="modal__subtitle">Post an expense and trigger automatic journal entries.</p>
+            <Modal
+              open={showModal}
+              onClose={() => setShowModal(false)}
+              title="Create Expense"
+              subtitle="Post an expense and trigger automatic journal entries."
+              maxWidth={760}
+              footer={(
+                <>
+                  <div className="summary-box" style={{ marginRight: '1rem' }}>
+                    <div className="summary-box__row summary-box__row--total">
+                      <strong>Total expense:</strong>
+                      <span>{formatMoneyGhs(Number(form.amount) || 0)}</span>
                     </div>
-                    <button type="button" aria-label="Close dialog" className="modal__close" onClick={() => setShowModal(false)}>×</button>
                   </div>
-                  <form onSubmit={(event) => void handleSubmit(event)}>
-                    <div className="modal__body">
-                      {formError && <div className="exec-dash__state-card exec-dash__state-card--error exec-dash__state-card--inline"><h2 className="exec-dash__state-title">Error</h2><p className="exec-dash__state-message">{formError}</p></div>}
-                      <div className="form-grid">
-                        <label className="form-field">
-                          <span className="form-field__label">Supplier *</span>
-                          <select
-                            value={form.supplier_id}
-                            onChange={(event) => setForm((current) => ({ ...current, supplier_id: event.target.value }))}
-                            required
-                          >
-                            <option value="">Select a supplier</option>
-                            {suppliers.map((supplier) => (
-                              <option key={supplier.supplier_id || supplier.id} value={supplier.supplier_id || supplier.id}>
-                                {supplier.name || supplier.supplier_name || '—'}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
+                  <div>
+                    <button type="button" className="button button--secondary" onClick={() => setShowModal(false)}>Cancel</button>{' '}
+                    <button type="submit" className="button button--primary" disabled={submitting} form="expense-form">
+                      {submitting ? 'Creating Expense...' : 'Create Expense'}
+                    </button>
+                  </div>
+                </>
+              )}
+            >
+              <form id="expense-form" onSubmit={(event) => void handleSubmit(event)}>
+                {formError && <div className="exec-dash__state-card exec-dash__state-card--error exec-dash__state-card--inline"><h2 className="exec-dash__state-title">Error</h2><p className="exec-dash__state-message">{formError}</p></div>}
+                <div className="form-grid">
+                  <label className="form-field">
+                    <span className="form-field__label">Supplier *</span>
+                    <select
+                      value={form.supplier_id}
+                      onChange={(event) => setForm((current) => ({ ...current, supplier_id: event.target.value }))}
+                      required
+                    >
+                      <option value="">Select a supplier</option>
+                      {suppliers.map((supplier) => (
+                        <option key={supplier.supplier_id || supplier.id} value={supplier.supplier_id || supplier.id}>
+                          {supplier.name || supplier.supplier_name || '—'}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
 
-                        <label className="form-field">
-                          <span className="form-field__label">Amount *</span>
-                          <input
-                            type="number"
-                            placeholder="0.00"
-                            value={form.amount}
-                            onChange={(event) => setForm((current) => ({ ...current, amount: event.target.value }))}
-                            step="0.01"
-                            min="0"
-                            required
-                          />
-                        </label>
+                  <label className="form-field">
+                    <span className="form-field__label">Amount *</span>
+                    <input
+                      type="number"
+                      placeholder="0.00"
+                      value={form.amount}
+                      onChange={(event) => setForm((current) => ({ ...current, amount: event.target.value }))}
+                      step="0.01"
+                      min="0"
+                      required
+                    />
+                  </label>
 
-                        <label className="form-field">
-                          <span className="form-field__label">GL Account (Expense/Asset) *</span>
-                          <select
-                            value={form.coa_account}
-                            onChange={(event) => setForm((current) => ({ ...current, coa_account: event.target.value }))}
-                            required
-                          >
-                            <option value="">Select an account</option>
-                            {accounts.map((account) => (
-                              <option key={account.account_id || account.id} value={account.account_id || account.id}>
-                                {account.code} — {account.name}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
+                  <label className="form-field">
+                    <span className="form-field__label">GL Account (Expense/Asset) *</span>
+                    <select
+                      value={form.coa_account}
+                      onChange={(event) => setForm((current) => ({ ...current, coa_account: event.target.value }))}
+                      required
+                    >
+                      <option value="">Select an account</option>
+                      {accounts.map((account) => (
+                        <option key={account.account_id || account.id} value={account.account_id || account.id}>
+                          {account.code} — {account.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
 
-                        <label className="form-field">
-                          <span className="form-field__label">Expense Date *</span>
-                          <input
-                            type="date"
-                            value={form.expense_date}
-                            onChange={(event) => setForm((current) => ({ ...current, expense_date: event.target.value }))}
-                            required
-                          />
-                        </label>
+                  <label className="form-field">
+                    <span className="form-field__label">Expense Date *</span>
+                    <input
+                      type="date"
+                      value={form.expense_date}
+                      onChange={(event) => setForm((current) => ({ ...current, expense_date: event.target.value }))}
+                      required
+                    />
+                  </label>
 
-                        <label className="form-field form-field--full">
-                          <span className="form-field__label">Project (optional — leave blank for overhead)</span>
-                          <select
-                            value={form.project_id}
-                            onChange={(event) => setForm((current) => ({ ...current, project_id: event.target.value }))}
-                          >
-                            <option value="">Overhead (no project)</option>
-                            {projects.map((project) => (
-                              <option key={project.project_id || project.id} value={project.project_id || project.id}>
-                                {project.name || project.project_name || '—'}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                      </div>
-                    </div>
-                    <div className="modal__footer">
-                      <div className="summary-box" style={{ marginRight: '1rem' }}>
-                        <div className="summary-box__row summary-box__row--total">
-                          <strong>Total expense:</strong>
-                          <span>{formatMoneyGhs(Number(form.amount) || 0)}</span>
-                        </div>
-                      </div>
-                      <div>
-                        <button type="button" className="button button--secondary" onClick={() => setShowModal(false)}>Cancel</button>{' '}
-                        <button type="submit" className="button button--primary" disabled={submitting}>{submitting ? 'Creating Expense...' : 'Create Expense'}</button>
-                      </div>
-                    </div>
-                  </form>
+                  <label className="form-field form-field--full">
+                    <span className="form-field__label">Project (optional — leave blank for overhead)</span>
+                    <select
+                      value={form.project_id}
+                      onChange={(event) => setForm((current) => ({ ...current, project_id: event.target.value }))}
+                    >
+                      <option value="">Overhead (no project)</option>
+                      {projects.map((project) => (
+                        <option key={project.project_id || project.id} value={project.project_id || project.id}>
+                          {project.name || project.project_name || '—'}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
                 </div>
-              </div>
-            )}
+              </form>
+            </Modal>
           </div>
         </div>
       </section>

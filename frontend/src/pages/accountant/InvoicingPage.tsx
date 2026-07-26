@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Modal } from '../../components/Modal'
 import { formatMoneyGhs } from '../../lib/formatMoney'
 import { invoiceCreate, fetchTaxRates, normalizeTaxRates, type TaxRates } from '../../lib/rpc/accountant'
 import { supabase } from '../../lib/supabase'
@@ -239,150 +240,139 @@ export function InvoicingPage() {
             </div>
             <div className="exec-dash__state-card exec-dash__state-card--empty"><h2 className="exec-dash__state-title">Recent invoices hidden</h2><p className="exec-dash__state-message">Recent invoices list removed from this view.</p></div>
 
-            {showModal && (
-              <div
-                className="modal-overlay"
-                onClick={(event) => {
-                  if (event.target !== event.currentTarget) return
-                  setShowModal(false)
-                }}
-                role="dialog"
-                aria-modal="true"
-              >
-                <div className="modal">
-                  <div className="modal__header">
-                    <div className="modal__header-text">
-                      <h2 className="modal__title">Create Invoice</h2>
-                      <p className="modal__subtitle">Provide customer, project, and line items.</p>
+            <Modal
+              open={showModal}
+              onClose={() => setShowModal(false)}
+              title="Create Invoice"
+              subtitle="Provide customer, project, and line items."
+              maxWidth={760}
+              footer={(
+                <>
+                  <div className="summary-box" style={{ marginRight: '1rem' }}>
+                    <div className="summary-box__row">
+                      <strong>Subtotal:</strong>
+                      <span>{formatMoneyGhs(subtotal)}</span>
                     </div>
-                    <button type="button" aria-label="Close dialog" className="modal__close" onClick={() => setShowModal(false)}>×</button>
+                    <div className="summary-box__row">
+                      <strong>Tax preview:</strong>
+                      <span>{formatMoneyGhs(taxAmount)}</span>
+                    </div>
+                    <div className="summary-box__row summary-box__row--total">
+                      <strong>Total (with taxes):</strong>
+                      <span>{formatMoneyGhs(totalWithTaxes)}</span>
+                    </div>
                   </div>
-                  <form onSubmit={(event) => void handleSubmit(event)}>
-                    <div className="modal__body">
-                      {formError && <div className="exec-dash__state-card exec-dash__state-card--error exec-dash__state-card--inline"><h2 className="exec-dash__state-title">Error</h2><p className="exec-dash__state-message">{formError}</p></div>}
-                      <div className="form-grid">
-                        <label className="form-field">
-                          <span className="form-field__label">Customer *</span>
-                          <select
-                            value={form.customer_id}
-                            onChange={(event) => setForm((current) => ({ ...current, customer_id: event.target.value }))}
-                            required
-                          >
-                            <option value="">Select a customer</option>
-                            {customers.map((customer) => (
-                              <option key={customer.customer_id || customer.id} value={customer.customer_id || customer.id}>
-                                {customer.name || customer.customer_name || '—'}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
+                  <div>
+                    <button type="button" className="button button--secondary" onClick={() => setShowModal(false)}>Cancel</button>{' '}
+                    <button type="submit" className="button button--primary" disabled={submitting} form="invoice-form">
+                      {submitting ? 'Creating Invoice...' : 'Create Invoice'}
+                    </button>
+                  </div>
+                </>
+              )}
+            >
+              <form id="invoice-form" onSubmit={(event) => void handleSubmit(event)}>
+                {formError && <div className="exec-dash__state-card exec-dash__state-card--error exec-dash__state-card--inline"><h2 className="exec-dash__state-title">Error</h2><p className="exec-dash__state-message">{formError}</p></div>}
+                <div className="form-grid">
+                  <label className="form-field">
+                    <span className="form-field__label">Customer *</span>
+                    <select
+                      value={form.customer_id}
+                      onChange={(event) => setForm((current) => ({ ...current, customer_id: event.target.value }))}
+                      required
+                    >
+                      <option value="">Select a customer</option>
+                      {customers.map((customer) => (
+                        <option key={customer.customer_id || customer.id} value={customer.customer_id || customer.id}>
+                          {customer.name || customer.customer_name || '—'}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
 
-                        <label className="form-field">
-                          <span className="form-field__label">Project *</span>
-                          <select
-                            value={form.project_id}
-                            onChange={(event) => setForm((current) => ({ ...current, project_id: event.target.value }))}
-                            required
-                          >
-                            <option value="">Select a project</option>
-                            {projects.map((project) => (
-                              <option key={project.project_id || project.id} value={project.project_id || project.id}>
-                                {project.name || project.project_name || '—'}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                      </div>
-
-                      <fieldset className="form-fieldset">
-                        <legend className="form-fieldset__legend">Line Items *</legend>
-                        {form.line_items.map((item, index) => (
-                          <div key={index} className="invoice-line-items__row">
-                            <input
-                              type="text"
-                              placeholder="Description"
-                              value={item.description}
-                              onChange={(event) => handleLineItemChange(index, 'description', event.target.value)}
-                            />
-                            <input
-                              type="number"
-                              placeholder="Amount"
-                              value={item.amount}
-                              onChange={(event) => handleLineItemChange(index, 'amount', event.target.value)}
-                              step="0.01"
-                              min="0"
-                            />
-                            <button
-                              type="button"
-                              className="button button--secondary"
-                              onClick={() => removeLineItem(index)}
-                              disabled={form.line_items.length === 1}
-                            >
-                              Remove
-                            </button>
-                          </div>
-                        ))}
-                        <button
-                          type="button"
-                          className="button button--secondary invoice-line-items__add-btn"
-                          onClick={addLineItem}
-                        >
-                          + Add Line Item
-                        </button>
-                      </fieldset>
-
-                      <fieldset className="form-fieldset">
-                        <legend className="form-fieldset__legend">Tax Toggles</legend>
-                        <label className="form-fieldset__checkbox">
-                          <input
-                            type="checkbox"
-                            checked={form.apply_vat}
-                            onChange={(event) => setForm((current) => ({ ...current, apply_vat: event.target.checked }))}
-                          />
-                          {vatLabel}
-                        </label>
-                        <label className="form-fieldset__checkbox">
-                          <input
-                            type="checkbox"
-                            checked={form.apply_nhil}
-                            onChange={(event) => setForm((current) => ({ ...current, apply_nhil: event.target.checked }))}
-                          />
-                          {nhilLabel}
-                        </label>
-                        <label className="form-fieldset__checkbox">
-                          <input
-                            type="checkbox"
-                            checked={form.apply_getfund}
-                            onChange={(event) => setForm((current) => ({ ...current, apply_getfund: event.target.checked }))}
-                          />
-                          {getfundLabel}
-                        </label>
-                      </fieldset>
-                    </div>
-                    <div className="modal__footer">
-                      <div className="summary-box" style={{ marginRight: '1rem' }}>
-                        <div className="summary-box__row">
-                          <strong>Subtotal:</strong>
-                          <span>{formatMoneyGhs(subtotal)}</span>
-                        </div>
-                        <div className="summary-box__row">
-                          <strong>Tax preview:</strong>
-                          <span>{formatMoneyGhs(taxAmount)}</span>
-                        </div>
-                        <div className="summary-box__row summary-box__row--total">
-                          <strong>Total (with taxes):</strong>
-                          <span>{formatMoneyGhs(totalWithTaxes)}</span>
-                        </div>
-                      </div>
-                      <div>
-                        <button type="button" className="button button--secondary" onClick={() => setShowModal(false)}>Cancel</button>{' '}
-                        <button type="submit" className="button button--primary" disabled={submitting}>{submitting ? 'Creating Invoice...' : 'Create Invoice'}</button>
-                      </div>
-                    </div>
-                  </form>
+                  <label className="form-field">
+                    <span className="form-field__label">Project *</span>
+                    <select
+                      value={form.project_id}
+                      onChange={(event) => setForm((current) => ({ ...current, project_id: event.target.value }))}
+                      required
+                    >
+                      <option value="">Select a project</option>
+                      {projects.map((project) => (
+                        <option key={project.project_id || project.id} value={project.project_id || project.id}>
+                          {project.name || project.project_name || '—'}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
                 </div>
-              </div>
-            )}
+
+                <fieldset className="form-fieldset">
+                  <legend className="form-fieldset__legend">Line Items *</legend>
+                  {form.line_items.map((item, index) => (
+                    <div key={index} className="invoice-line-items__row">
+                      <input
+                        type="text"
+                        placeholder="Description"
+                        value={item.description}
+                        onChange={(event) => handleLineItemChange(index, 'description', event.target.value)}
+                      />
+                      <input
+                        type="number"
+                        placeholder="Amount"
+                        value={item.amount}
+                        onChange={(event) => handleLineItemChange(index, 'amount', event.target.value)}
+                        step="0.01"
+                        min="0"
+                      />
+                      <button
+                        type="button"
+                        className="button button--secondary"
+                        onClick={() => removeLineItem(index)}
+                        disabled={form.line_items.length === 1}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    className="button button--secondary invoice-line-items__add-btn"
+                    onClick={addLineItem}
+                  >
+                    + Add Line Item
+                  </button>
+                </fieldset>
+
+                <fieldset className="form-fieldset">
+                  <legend className="form-fieldset__legend">Tax Toggles</legend>
+                  <label className="form-fieldset__checkbox">
+                    <input
+                      type="checkbox"
+                      checked={form.apply_vat}
+                      onChange={(event) => setForm((current) => ({ ...current, apply_vat: event.target.checked }))}
+                    />
+                    {vatLabel}
+                  </label>
+                  <label className="form-fieldset__checkbox">
+                    <input
+                      type="checkbox"
+                      checked={form.apply_nhil}
+                      onChange={(event) => setForm((current) => ({ ...current, apply_nhil: event.target.checked }))}
+                    />
+                    {nhilLabel}
+                  </label>
+                  <label className="form-fieldset__checkbox">
+                    <input
+                      type="checkbox"
+                      checked={form.apply_getfund}
+                      onChange={(event) => setForm((current) => ({ ...current, apply_getfund: event.target.checked }))}
+                    />
+                    {getfundLabel}
+                  </label>
+                </fieldset>
+              </form>
+            </Modal>
           </div>
         </div>
       </section>

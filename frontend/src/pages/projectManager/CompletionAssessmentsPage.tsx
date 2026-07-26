@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Modal } from '../../components/Modal'
 import { getRecords, completionAssessmentSubmit } from '../../lib/rpc/accountant'
 import { EmptyState } from '../../components/EmptyState'
 import { SearchField } from '../../components/SearchField'
@@ -231,72 +232,56 @@ export function CompletionAssessmentsPage() {
         </div>
       </section>
 
-      {showModal && (
-        <div
-          className="modal-overlay"
-          onClick={(event) => {
-            if (event.target !== event.currentTarget) return
-            setShowModal(false)
-          }}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="assess-modal-title"
-        >
-          <div className="modal">
-            <div className="modal__header">
-              <div className="modal__header-text">
-                <h2 id="assess-modal-title" className="modal__title">Submit Completion Assessment</h2>
-                <p className="modal__subtitle">Record the current percentage of completion for the project.</p>
-              </div>
-              <button type="button" aria-label="Close dialog" className="modal__close" onClick={() => setShowModal(false)}>×</button>
-            </div>
-            <form onSubmit={(e) => void handleSubmit(e)}>
-              <div className="modal__body">
-                {formError && <div className="exec-dash__state-card exec-dash__state-card--error exec-dash__state-card--inline"><h2 className="exec-dash__state-title">Error</h2><p className="exec-dash__state-message">{formError}</p></div>}
-                <div className="form-grid">
-                  <label className="form-field form-field--full">
-                    <span className="form-field__label">Project</span>
-                    <select
-                      value={selectedProject}
-                      onChange={(e) => setSelectedProject(e.target.value)}
-                      required
-                      
-                    >
-                      <option value="">Select project</option>
-                      {projects.map((p) => (
-                        <option key={p.project_id ?? p.id} value={p.project_id ?? p.id}>{p.name}</option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="form-field">
-                    <span className="form-field__label">Period</span>
-                    <input type="month" value={period} onChange={(e) => setPeriod(e.target.value)} required />
-                  </label>
-                  <label className="form-field">
-                    <span className="form-field__label">Percent Complete</span>
-                    <input
-                      type="number"
-                      value={percent}
-                      onChange={(e) => setPercent(e.target.value)}
-                      min="0"
-                      max="100"
-                      step="0.01"
-                      required
-                      
-                    />
-                  </label>
-                </div>
-              </div>
-              <div className="modal__footer">
-                <button type="button" className="button button--secondary" onClick={() => setShowModal(false)}>Cancel</button>
-                <button type="submit" className="button button--primary" disabled={submitting}>
-                  {submitting ? 'Submitting…' : 'Submit Assessment'}
-                </button>
-              </div>
-            </form>
+      <Modal
+        open={showModal}
+        onClose={() => setShowModal(false)}
+        title="Submit Completion Assessment"
+        subtitle="Record the current percentage of completion for the project."
+        maxWidth={760}
+        footer={(
+          <>
+            <button type="button" className="button button--secondary" onClick={() => setShowModal(false)}>Cancel</button>
+            <button type="submit" className="button button--primary" disabled={submitting} form="completion-assessment-form">
+              {submitting ? 'Submitting…' : 'Submit Assessment'}
+            </button>
+          </>
+        )}
+      >
+        <form id="completion-assessment-form" onSubmit={(e) => void handleSubmit(e)}>
+          {formError && <div className="exec-dash__state-card exec-dash__state-card--error exec-dash__state-card--inline"><h2 className="exec-dash__state-title">Error</h2><p className="exec-dash__state-message">{formError}</p></div>}
+          <div className="form-grid">
+            <label className="form-field form-field--full">
+              <span className="form-field__label">Project</span>
+              <select
+                value={selectedProject}
+                onChange={(e) => setSelectedProject(e.target.value)}
+                required
+              >
+                <option value="">Select project</option>
+                {projects.map((p) => (
+                  <option key={p.project_id ?? p.id} value={p.project_id ?? p.id}>{p.name}</option>
+                ))}
+              </select>
+            </label>
+            <label className="form-field">
+              <span className="form-field__label">Period</span>
+              <input type="month" value={period} onChange={(e) => setPeriod(e.target.value)} required />
+            </label>
+            <label className="form-field">
+              <span className="form-field__label">Percent Complete</span>
+              <input
+                type="number"
+                value={percent}
+                onChange={(e) => setPercent(e.target.value)}
+                min="0"
+                max="100"
+                step="0.01"
+                required
+              />
+            </label>
           </div>
-        </div>
-      )}
+        </form>
+      </Modal>
     </article>
   )
 }
