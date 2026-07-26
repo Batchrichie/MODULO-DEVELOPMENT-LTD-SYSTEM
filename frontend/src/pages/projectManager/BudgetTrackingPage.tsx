@@ -95,7 +95,7 @@ export function BudgetTrackingPage() {
             <p>Totals-only budget vs actual, as provided by the backend.</p>
           </div>
           <div className="users-card__actions">
-            <label className="form-field" style={{ margin: 0, minWidth: '14rem' }}>
+            <label className="form-field" style={{ margin: 0, width: '100%', minWidth: 0 }}>
               <span className="form-field__label">Project</span>
               <select value={selectedProject} onChange={(e) => setSelectedProject(e.target.value)}>
                 <option value="">Select project</option>

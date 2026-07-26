@@ -169,7 +169,7 @@ export function EmployeeRecordsPage() {
         <div className="registry-toolbar">
           <div className="registry-toolbar__search-row">
             <SearchField value={searchQuery} onChange={setSearchQuery} placeholder="Search by name, email, or phone…" />
-            <label className="form-field" style={{ margin: 0, minWidth: '12rem' }}>
+            <label className="form-field" style={{ margin: 0, width: '100%', minWidth: 0 }}>
               <select
                 value={filterCategory}
                 onChange={(event) => setFilterCategory(event.target.value)}
