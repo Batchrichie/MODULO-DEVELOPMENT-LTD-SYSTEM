@@ -1,18 +1,17 @@
--- RPC: api.list_rental_contracts()
--- Returns rental contracts available to the current authenticated user.
--- This avoids the unsafe direct table read path and keeps contract access
--- explicit and auditable through the RPC layer.
-
 create or replace function api.list_rental_contracts()
 returns jsonb
 language plpgsql
 stable
 security definer
-set search_path = public
+set search_path to 'public', 'pg_temp'
 as $$
 declare
+  v_guard jsonb;
   v_rows jsonb;
 begin
+  v_guard := api.require_role(ARRAY['Accountant']);
+  IF v_guard IS NOT NULL THEN RETURN v_guard; END IF;
+
   select coalesce(
     jsonb_agg(
       jsonb_build_object(
@@ -38,4 +37,4 @@ exception
 end;
 $$;
 
-grant execute on function api.list_rental_contracts() to anon, authenticated;
+grant execute on function api.list_rental_contracts() to authenticated;

@@ -47,6 +47,7 @@ export function RentalsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [contractsNote, setContractsNote] = useState<string | null>(null)
+  const [contractsError, setContractsError] = useState<string | null>(null)
   const [taxError, setTaxError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [showModal, setShowModal] = useState(false)
@@ -81,12 +82,16 @@ export function RentalsPage() {
 
     if (contractsResult.ok) {
       setContracts(contractsResult.data)
+      setContractsError(null)
       if (!contractsResult.data.length) {
         setContractsNote('No rental contracts were returned by the backend list. If you expected contracts, verify that contracts exist and that the backend contract RPC is available.')
+      } else {
+        setContractsNote(null)
       }
     } else {
       setContracts([])
-      setContractsNote(`Rental contract lookup failed: ${contractsResult.error}`)
+      setContractsError(`Rental contract lookup failed: ${contractsResult.error}`)
+      setContractsNote(null)
     }
 
     if (taxResult.ok) {
@@ -246,7 +251,12 @@ export function RentalsPage() {
         <div className="exec-dash__row">
           <section className="exec-dash__panel">
             <div className="exec-dash__panel-title">Rental Contracts</div>
-            {!contracts.length ? (
+            {contractsError ? (
+              <div className="exec-dash__state-card exec-dash__state-card--error">
+                <h2 className="exec-dash__state-title">Unable to load rental contracts</h2>
+                <p className="exec-dash__state-message">{contractsError}</p>
+              </div>
+            ) : !contracts.length ? (
               <EmptyState
                 icon="🧾"
                 title="No rental contracts available"
