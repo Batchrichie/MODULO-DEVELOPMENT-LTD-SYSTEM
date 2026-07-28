@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Modal } from '../../components/Modal'
 import { formatMoneyGhs } from '../../lib/formatMoney'
-import { createRecord, fetchAccounts, getRecords, type AccountantRpcResult } from '../../lib/rpc/accountant'
+import { createRecord, fetchAccounts, getRecords } from '../../lib/rpc/accountant'
 import '../../styles/executive-dashboard.css'
 
 interface ProjectSummary {

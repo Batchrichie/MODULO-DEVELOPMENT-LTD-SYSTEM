@@ -145,7 +145,7 @@ export type MyEmployeeRecord = {
 
 export async function fetchMyEmployeeRecord(
   email?: string,
-): Promise<AccountantRpcResult<MyEmployeeRecord | null>> {
+): Promise<AccountantRpcResult<MyEmployeeRecord>> {
   const result = await getRecords<MyEmployeeRecord[]>('employees', 1, 100)
   if (!result.ok) return result
 
