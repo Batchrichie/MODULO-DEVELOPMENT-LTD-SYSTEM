@@ -1,19 +1,19 @@
 import { useEffect, useState } from 'react'
 import { EmptyState } from '../../components/EmptyState'
+import { PendingBackendNotice } from '../../components/PendingBackendNotice'
 import { formatMoneyGhs } from '../../lib/formatMoney'
-import { supabase } from '../../lib/supabase'
-import { unwrapRpcResponse } from '../../lib/common'
+import { getRecords } from '../../lib/rpc/accountant'
 import '../../styles/executive-dashboard.css'
 
 interface PpeScheduleRecord {
-  schedule_id?: string
   id?: string
-  asset_name?: string | null
-  year?: string | null
-  opening_balance?: number | null
-  additions?: number | null
-  disposals?: number | null
-  closing_balance?: number | null
+  name?: string | null
+  category?: string | null
+  cost?: number | null
+  useful_life_years?: number | null
+  depreciation_method?: string | null
+  acquisition_date?: string | null
+  status?: string | null
 }
 
 export function PpeSchedulePage() {
@@ -28,23 +28,13 @@ export function PpeSchedulePage() {
   async function loadRows() {
     setLoading(true)
     setError(null)
-    const { data, error } = await supabase.schema('api').rpc('get_records', {
-      p_resource: 'ppe_schedule',
-      p_page: 1,
-      p_limit: 100,
-    })
 
-    if (error) {
-      setError(error.message)
-      setRows([])
+    const result = await getRecords<PpeScheduleRecord[]>('fixed_assets', 1, 100)
+    if (result.ok) {
+      setRows(result.data)
     } else {
-      const unwrapped = unwrapRpcResponse(data)
-      if (!unwrapped.ok) {
-        setError(unwrapped.error)
-        setRows([])
-      } else {
-        setRows(Array.isArray(unwrapped.value) ? unwrapped.value : [])
-      }
+      setError(result.error)
+      setRows([])
     }
 
     setLoading(false)
@@ -55,6 +45,26 @@ export function PpeSchedulePage() {
   }
 
   if (error) {
+    if (error.includes('Unknown resource')) {
+      return (
+        <article className="admin-dashboard">
+          <header className="admin-dashboard__header">
+            <div>
+              <p className="admin-dashboard__eyebrow">Asset Management</p>
+              <h1>PPE Schedule</h1>
+              <p>Review the PPE schedule year-over-year.</p>
+            </div>
+          </header>
+          <section className="users-card">
+            <PendingBackendNotice
+              title="Pending backend"
+              description="PPE Schedule requires a backend update. The get_records function does not expose the fixed_assets resource directly."
+            />
+          </section>
+        </article>
+      )
+    }
+
     return <article className="admin-dashboard"><header className="admin-dashboard__header"><div><p className="admin-dashboard__eyebrow">Asset Management</p><h1>PPE Schedule</h1><p>Review the PPE schedule year-over-year.</p></div></header><section className="users-card"><div className="exec-dash__state-card exec-dash__state-card--error"><h2 className="exec-dash__state-title">Unable to load PPE schedule</h2><p className="exec-dash__state-message">{error}</p></div></section></article>
   }
 
@@ -88,23 +98,25 @@ export function PpeSchedulePage() {
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr>
-                  <th style={{ textAlign: 'left', padding: '0.5rem' }}>Asset</th>
-                  <th style={{ textAlign: 'left', padding: '0.5rem' }}>Year</th>
-                  <th style={{ textAlign: 'right', padding: '0.5rem' }}>Opening balance</th>
-                  <th style={{ textAlign: 'right', padding: '0.5rem' }}>Additions</th>
-                  <th style={{ textAlign: 'right', padding: '0.5rem' }}>Disposals</th>
-                  <th style={{ textAlign: 'right', padding: '0.5rem' }}>Closing balance</th>
+                  <th style={{ textAlign: 'left', padding: '0.5rem' }}>Name</th>
+                  <th style={{ textAlign: 'left', padding: '0.5rem' }}>Category</th>
+                  <th style={{ textAlign: 'right', padding: '0.5rem' }}>Cost</th>
+                  <th style={{ textAlign: 'right', padding: '0.5rem' }}>Useful life (years)</th>
+                  <th style={{ textAlign: 'left', padding: '0.5rem' }}>Depreciation method</th>
+                  <th style={{ textAlign: 'left', padding: '0.5rem' }}>Acquisition date</th>
+                  <th style={{ textAlign: 'left', padding: '0.5rem' }}>Status</th>
                 </tr>
               </thead>
               <tbody>
                 {rows.map((row) => (
-                  <tr key={row.schedule_id ?? row.id ?? row.asset_name}>
-                    <td style={{ padding: '0.5rem' }}>{row.asset_name ?? '—'}</td>
-                    <td style={{ padding: '0.5rem' }}>{row.year ?? '—'}</td>
-                    <td style={{ textAlign: 'right', padding: '0.5rem' }}>{formatMoneyGhs(Number(row.opening_balance ?? 0) || 0)}</td>
-                    <td style={{ textAlign: 'right', padding: '0.5rem' }}>{formatMoneyGhs(Number(row.additions ?? 0) || 0)}</td>
-                    <td style={{ textAlign: 'right', padding: '0.5rem' }}>{formatMoneyGhs(Number(row.disposals ?? 0) || 0)}</td>
-                    <td style={{ textAlign: 'right', padding: '0.5rem' }}>{formatMoneyGhs(Number(row.closing_balance ?? 0) || 0)}</td>
+                  <tr key={row.id ?? row.name}>
+                    <td style={{ padding: '0.5rem' }}>{row.name ?? '—'}</td>
+                    <td style={{ padding: '0.5rem' }}>{row.category ?? '—'}</td>
+                    <td style={{ textAlign: 'right', padding: '0.5rem' }}>{formatMoneyGhs(Number(row.cost ?? 0) || 0)}</td>
+                    <td style={{ textAlign: 'right', padding: '0.5rem' }}>{row.useful_life_years ?? '—'}</td>
+                    <td style={{ padding: '0.5rem' }}>{row.depreciation_method ?? '—'}</td>
+                    <td style={{ padding: '0.5rem' }}>{row.acquisition_date ?? '—'}</td>
+                    <td style={{ padding: '0.5rem' }}>{row.status ?? '—'}</td>
                   </tr>
                 ))}
               </tbody>

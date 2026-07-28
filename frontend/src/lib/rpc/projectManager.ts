@@ -139,3 +139,22 @@ export async function fetchProjectProfitability(projectId: string): Promise<PmRp
   const record = (unwrapped && typeof unwrapped === 'object' ? unwrapped : {}) as ProjectProfitability
   return { ok: true, data: record, raw: data }
 }
+
+export interface SiteReportRecord {
+  project_id?: number
+  project_name?: string | null
+  report_date?: string | null
+  submitted_by?: number | null
+  status?: string | null
+  // TODO: expand after confirming return columns
+}
+
+export async function fetchPendingSiteReports(): Promise<{ ok: true; data: { success: boolean; data: SiteReportRecord[]; error: string | null }; raw: unknown } | { ok: false; error: string; code?: string }> {
+  const { data, error } = await supabase.rpc('list_pending_site_reports')
+
+  if (error) {
+    return { ok: false, error: error.message, code: error.code }
+  }
+
+  return { ok: true, data: data as { success: boolean; data: SiteReportRecord[]; error: string | null }, raw: data }
+}

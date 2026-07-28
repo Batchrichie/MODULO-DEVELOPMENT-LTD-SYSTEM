@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { formatMoneyGhs } from '../../lib/formatMoney'
 import { EmptyState } from '../../components/EmptyState'
+import { PendingBackendNotice } from '../../components/PendingBackendNotice'
 import { fetchJournalEntries, type AccountantJournal } from '../../lib/rpc/accountant'
 import '../../styles/executive-dashboard.css'
 
@@ -44,6 +45,18 @@ export function AccountantJournalEntriesPage() {
   }
 
   if (error) {
+    if (error.includes('Unknown resource')) {
+      return (
+        <article className="exec-dash">
+          <p className="exec-dash__breadcrumb">Accounting Workspace / Journal Entries</p>
+          <PendingBackendNotice
+            title="Pending backend"
+            description="Journal entry listing requires a backend update. The get_records function does not expose the journals table directly."
+          />
+        </article>
+      )
+    }
+
     return <article className="exec-dash"><p className="exec-dash__breadcrumb">Accounting Workspace / Journal Entries</p><div className="exec-dash__state-card exec-dash__state-card--error"><h2 className="exec-dash__state-title">Unable to load journal entries</h2><p className="exec-dash__state-message">{error}</p><p className="exec-dash__state-hint">The backend may not expose the expected journal RPC payload yet.</p></div></article>
   }
 

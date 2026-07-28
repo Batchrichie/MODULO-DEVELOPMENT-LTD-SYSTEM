@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { EmptyState } from '../../components/EmptyState'
 import { Modal } from '../../components/Modal'
+import { PendingBackendNotice } from '../../components/PendingBackendNotice'
 import { SearchField } from '../../components/SearchField'
 import { deriveStatusBadgeFromState, StatusBadge } from '../../components/StatusBadge'
 import { formatMoneyGhs } from '../../lib/formatMoney'
@@ -252,10 +253,17 @@ export function RentalsPage() {
           <section className="exec-dash__panel">
             <div className="exec-dash__panel-title">Rental Contracts</div>
             {contractsError ? (
-              <div className="exec-dash__state-card exec-dash__state-card--error">
-                <h2 className="exec-dash__state-title">Unable to load rental contracts</h2>
-                <p className="exec-dash__state-message">{contractsError}</p>
-              </div>
+              contractsError.includes('Unknown resource') ? (
+                <PendingBackendNotice
+                  title="Pending backend"
+                  description="Rental contracts require a backend update. The get_records function does not expose the rental_contracts table directly."
+                />
+              ) : (
+                <div className="exec-dash__state-card exec-dash__state-card--error">
+                  <h2 className="exec-dash__state-title">Unable to load rental contracts</h2>
+                  <p className="exec-dash__state-message">{contractsError}</p>
+                </div>
+              )
             ) : !contracts.length ? (
               <EmptyState
                 icon="🧾"

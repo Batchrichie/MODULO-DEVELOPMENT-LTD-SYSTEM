@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { formatMoneyGhs } from '../../lib/formatMoney'
 import { EmptyState } from '../../components/EmptyState'
 import { FormErrorBanner } from '../../components/FormErrorBanner'
+import { PendingBackendNotice } from '../../components/PendingBackendNotice'
 import { getRecords } from '../../lib/rpc/accountant'
 import '../../styles/executive-dashboard.css'
 
@@ -100,6 +101,26 @@ export function AccountantGeneralLedgerPage() {
   }
 
   if (error) {
+    if (error.includes('Unknown resource')) {
+      return (
+        <article className="admin-dashboard" role="alert">
+          <header className="admin-dashboard__header">
+            <div>
+              <p className="admin-dashboard__eyebrow">Accounting Workspace</p>
+              <h1>General Ledger</h1>
+              <p>Review ledger journals and line-level postings by journal.</p>
+            </div>
+          </header>
+          <section className="users-card">
+            <PendingBackendNotice
+              title="Pending backend"
+              description="General Ledger requires a backend update. The get_records function does not expose the journal_lines table directly."
+            />
+          </section>
+        </article>
+      )
+    }
+
     return (
       <article className="admin-dashboard" role="alert">
         <header className="admin-dashboard__header">

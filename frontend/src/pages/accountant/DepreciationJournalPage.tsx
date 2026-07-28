@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react'
 import { EmptyState } from '../../components/EmptyState'
+import { PendingBackendNotice } from '../../components/PendingBackendNotice'
 import { formatMoneyGhs } from '../../lib/formatMoney'
-import { supabase } from '../../lib/supabase'
-import { unwrapRpcResponse } from '../../lib/common'
 import '../../styles/executive-dashboard.css'
 
 interface DepreciationJournalRecord {
@@ -26,26 +25,8 @@ export function DepreciationJournalPage() {
 
   async function loadRows() {
     setLoading(true)
-    setError(null)
-    const { data, error } = await supabase.schema('api').rpc('get_records', {
-      p_resource: 'depreciation_journal',
-      p_page: 1,
-      p_limit: 100,
-    })
-
-    if (error) {
-      setError(error.message)
-      setRows([])
-    } else {
-      const unwrapped = unwrapRpcResponse(data)
-      if (!unwrapped.ok) {
-        setError(unwrapped.error)
-        setRows([])
-      } else {
-        setRows(Array.isArray(unwrapped.value) ? unwrapped.value : [])
-      }
-    }
-
+    setError('Depreciation journal listing requires a backend update. No dedicated depreciation table exists — entries are stored in the journals table which is not currently exposed via get_records.')
+    setRows([])
     setLoading(false)
   }
 
@@ -54,7 +35,23 @@ export function DepreciationJournalPage() {
   }
 
   if (error) {
-    return <article className="admin-dashboard"><header className="admin-dashboard__header"><div><p className="admin-dashboard__eyebrow">Asset Management</p><h1>Depreciation Journal</h1><p>Review monthly depreciation entries and their accounting impact.</p></div></header><section className="users-card"><div className="exec-dash__state-card exec-dash__state-card--error"><h2 className="exec-dash__state-title">Unable to load depreciation journal</h2><p className="exec-dash__state-message">{error}</p></div></section></article>
+    return (
+      <article className="admin-dashboard">
+        <header className="admin-dashboard__header">
+          <div>
+            <p className="admin-dashboard__eyebrow">Asset Management</p>
+            <h1>Depreciation Journal</h1>
+            <p>Review monthly depreciation entries and their accounting impact.</p>
+          </div>
+        </header>
+        <section className="users-card">
+          <PendingBackendNotice
+            title="Pending backend"
+            description="Depreciation journal listing requires a backend update. No dedicated depreciation table exists — entries are stored in the journals table which is not currently exposed via get_records."
+          />
+        </section>
+      </article>
+    )
   }
 
   return (

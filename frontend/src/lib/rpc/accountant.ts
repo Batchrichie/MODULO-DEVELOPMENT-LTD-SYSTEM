@@ -462,12 +462,7 @@ export async function fetchTaxRates(): Promise<AccountantRpcResult<TaxRateSettin
 }
 
 export async function fetchRentalContracts(): Promise<AccountantRpcResult<RentalContract[]>> {
-  const result = await callRpc<RentalContract[]>('list_rental_contracts', {})
-
-  if (!result.ok) return result
-
-  const rows = Array.isArray(result.data) ? result.data : (result.data as any)?.rows || []
-  return { ok: true, data: rows as RentalContract[], raw: result.raw }
+  return getRecords<RentalContract[]>('rental_contracts', 1, 100)
 }
 
 export async function fetchMyPayslips(
