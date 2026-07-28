@@ -446,22 +446,36 @@ export async function fetchMyPayslips(
   page = 1,
   limit = 25,
 ): Promise<AccountantRpcResult<PayslipRecord[]>> {
-  return getRecords<PayslipRecord[]>('payslips', page, limit)
+  const result = await callRpc<any>('list_my_payslips', {
+    p_page: page,
+    p_limit: limit,
+  })
+
+  if (!result.ok) return result
+
+  const rows = Array.isArray(result.data)
+    ? result.data
+    : Array.isArray((result.data as any)?.rows)
+    ? (result.data as any).rows
+    : []
+
+  return { ok: true, data: rows as PayslipRecord[], raw: result.raw }
 }
 
 export async function fetchMyProfile(): Promise<AccountantRpcResult<MyEmployeeRecord>> {
-  const { data: authData, error: authError } = await supabase.auth.getUser()
-  const userEmail = authData?.user?.email
+  const result = await getRecords<MyEmployeeRecord[]>('employees', 1, 100)
+  if (!result.ok) return result
 
-  if (authError || !userEmail) {
+  const rows = result.data ?? []
+  if (!rows.length) {
     return {
       ok: false,
-      error: authError?.message ?? 'Unable to resolve current user email',
-      code: 'NO_USER_EMAIL',
+      error: 'Employee profile not found',
+      code: 'NOT_FOUND',
     }
   }
 
-  return fetchMyEmployeeRecord(userEmail)
+  return { ok: true, data: rows[0], raw: result.raw }
 }
 
 export async function taxRatesUpdate(taxType: string, rate: number): Promise<AccountantRpcResult<{ success: boolean }>> {

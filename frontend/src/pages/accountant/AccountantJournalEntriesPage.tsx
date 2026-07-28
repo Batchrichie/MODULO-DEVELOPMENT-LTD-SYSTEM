@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { formatMoneyGhs } from '../../lib/formatMoney'
+import { EmptyState } from '../../components/EmptyState'
 import { fetchJournalEntries, type AccountantJournal } from '../../lib/rpc/accountant'
 import '../../styles/executive-dashboard.css'
 
@@ -61,7 +62,11 @@ export function AccountantJournalEntriesPage() {
         <div className="exec-dash__panel">
           <div className="exec-dash__panel-title">Entries</div>
           {!filteredEntries.length ? (
-            <div className="exec-dash__state-card exec-dash__state-card--empty"><h2 className="exec-dash__state-title">No journal entries found</h2><p className="exec-dash__state-message">No system-generated journals are available yet.</p></div>
+            <EmptyState
+              icon="🧾"
+              title="No journal entries found"
+              description="No system-generated journals are available yet."
+            />
           ) : (
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>

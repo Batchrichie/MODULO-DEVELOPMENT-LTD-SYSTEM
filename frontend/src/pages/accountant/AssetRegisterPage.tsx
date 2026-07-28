@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { EmptyState } from '../../components/EmptyState'
 import { formatMoneyGhs } from '../../lib/formatMoney'
 import { supabase } from '../../lib/supabase'
 import { unwrapRpcResponse } from '../../lib/common'
@@ -307,7 +308,11 @@ export function AssetRegisterPage() {
         {!showCreateModal && !showDisposeModal && formError && <div className="exec-dash__state-card exec-dash__state-card--error" style={{ marginBottom: '1rem' }}><h2 className="exec-dash__state-title">Form error</h2><p className="exec-dash__state-message">{formError}</p></div>}
 
         {!assets.length ? (
-          <div className="exec-dash__state-card exec-dash__state-card--empty"><h2 className="exec-dash__state-title">No assets found</h2><p className="exec-dash__state-message">No fixed assets are currently available through the generic assets resource.</p></div>
+          <EmptyState
+            icon="📦"
+            title="No assets found"
+            description="No fixed assets are currently available through the generic assets resource."
+          />
         ) : (
           <div style={{ overflowX: 'auto', padding: '0 21px 21px' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>

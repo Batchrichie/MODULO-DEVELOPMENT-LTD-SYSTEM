@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { EmptyState } from '../../components/EmptyState'
 import { Modal } from '../../components/Modal'
 import { formatMoneyGhs } from '../../lib/formatMoney'
 import { expenseCreate, fetchAccounts } from '../../lib/rpc/accountant'
@@ -200,7 +201,11 @@ export function ExpensesPage() {
                 <button type="button" className="button button--primary" onClick={() => { setForm(emptyForm()); setFormError(null); setShowModal(true) }}>New Expense</button>
               </div>
             </div>
-            <div className="exec-dash__state-card exec-dash__state-card--empty"><h2 className="exec-dash__state-title">Recent expenses hidden</h2><p className="exec-dash__state-message">Recent expenses list removed from this view.</p></div>
+            <EmptyState
+              icon="🧾"
+              title="Recent expenses hidden"
+              description="Recent expenses list is not shown in this view."
+            />
 
             <Modal
               open={showModal}

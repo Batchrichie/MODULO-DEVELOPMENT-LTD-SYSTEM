@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { EmptyState } from '../../components/EmptyState'
 import { fetchTaxRates, taxRatesUpdate, reportTax } from '../../lib/rpc/accountant'
 import { Modal } from '../../components/Modal'
 import { FormErrorBanner } from '../../components/FormErrorBanner'
@@ -186,10 +187,11 @@ export function TaxPage() {
         {statusMessage && <div className="exec-dash__state-card" style={{ marginBottom: '1rem' }}><h2 className="exec-dash__state-title">Success</h2><p className="exec-dash__state-message">{statusMessage}</p></div>}
 
         {!taxRates.length ? (
-          <div className="exec-dash__state-card exec-dash__state-card--empty">
-            <h2 className="exec-dash__state-title">No tax rates found</h2>
-            <p className="exec-dash__state-message">Tax rate data is not currently available.</p>
-          </div>
+          <EmptyState
+            icon="🏷️"
+            title="No tax rates found"
+            description="Tax rate data is not currently available."
+          />
         ) : (
           <div style={{ overflowX: 'auto', padding: '0 21px 21px' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -238,10 +240,11 @@ export function TaxPage() {
         </div>
 
         {!scheduleReport || !scheduleReport.accounts.length ? (
-          <div className="exec-dash__state-card exec-dash__state-card--empty">
-            <h2 className="exec-dash__state-title">No schedule data</h2>
-            <p className="exec-dash__state-message">No tax schedule records are available for the selected tax type and period.</p>
-          </div>
+          <EmptyState
+            icon="📅"
+            title="No schedule data"
+            description="No tax schedule records are available for the selected tax type and period."
+          />
         ) : (
           <>
             <div style={{ overflowX: 'auto', padding: '0 21px 21px' }}>

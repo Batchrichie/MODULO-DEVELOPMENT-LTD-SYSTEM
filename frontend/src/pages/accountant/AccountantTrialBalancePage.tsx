@@ -158,7 +158,11 @@ export function AccountantTrialBalancePage() {
         <div className="exec-dash__panel exec-dash__panel--standalone">
           <div className="exec-dash__panel-title">Trial balance rows</div>
           {!rows.length ? (
-            <div className="exec-dash__state-card exec-dash__state-card--empty"><h2 className="exec-dash__state-title">No trial balance rows</h2><p className="exec-dash__state-message">No balances are available for this date.</p></div>
+            <EmptyState
+              icon="📊"
+              title="No trial balance rows"
+              description="No balances are available for the selected date."
+            />
           ) : (
             <div className="table-wrapper">
               <table className="data-table">

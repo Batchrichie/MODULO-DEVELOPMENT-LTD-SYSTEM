@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { EmptyState } from '../../components/EmptyState'
 import { Modal } from '../../components/Modal'
 import { formatMoneyGhs } from '../../lib/formatMoney'
 import {
@@ -184,7 +185,13 @@ export function AccountantCoaPage() {
     }
 
     if (!accounts.length) {
-      return <div className="exec-dash__state-card exec-dash__state-card--empty"><h2 className="exec-dash__state-title">No accounts found</h2><p className="exec-dash__state-message">No accounts are available yet.</p></div>
+      return (
+        <EmptyState
+          icon="🏦"
+          title="No accounts found"
+          description="No chart of accounts entries are available yet. Create one to start posting transactions."
+        />
+      )
     }
 
     return (

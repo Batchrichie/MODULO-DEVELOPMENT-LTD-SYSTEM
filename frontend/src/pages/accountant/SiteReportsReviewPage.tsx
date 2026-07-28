@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { EmptyState } from '../../components/EmptyState'
 import '../../styles/executive-dashboard.css'
 import { listPendingSiteReports, siteReportApprove, siteReportReject, type SiteReport } from '../../lib/rpc/accountant'
 import { StatusBadge, deriveStatusBadgeFromState } from '../../components/StatusBadge'
@@ -54,7 +55,11 @@ export function SiteReportsReviewPage() {
         ) : error ? (
           <div className="exec-dash__state-card exec-dash__state-card--error"><h2 className="exec-dash__state-title">Unable to load</h2><p className="exec-dash__state-message">{error}</p></div>
         ) : !reports.length ? (
-          <div className="exec-dash__state-card exec-dash__state-card--empty"><h2 className="exec-dash__state-title">No pending reports</h2><p className="exec-dash__state-message">There are no site reports awaiting review.</p></div>
+          <EmptyState
+            icon="✅"
+            title="No pending reports"
+            description="There are no site reports awaiting review."
+          />
         ) : (
           <div className="table-wrapper">
             <table className="data-table">

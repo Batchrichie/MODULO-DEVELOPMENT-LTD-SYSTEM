@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { EmptyState } from '../../components/EmptyState'
 import { formatMoneyGhs } from '../../lib/formatMoney'
 import { supabase } from '../../lib/supabase'
 import { unwrapRpcResponse } from '../../lib/common'
@@ -77,7 +78,11 @@ export function PpeSchedulePage() {
         </div>
 
         {!rows.length ? (
-          <div className="exec-dash__state-card exec-dash__state-card--empty"><h2 className="exec-dash__state-title">No PPE schedule data found</h2><p className="exec-dash__state-message">No rows are available for the `ppe_schedule` resource. This page currently calls a resource that is not in the confirmed whitelist and will be corrected in a follow-up defect ticket.</p></div>
+          <EmptyState
+            icon="📋"
+            title="No PPE schedule data found"
+            description="No rows are available for the `ppe_schedule` resource. This page calls a backend resource that may not be exposed yet."
+          />
         ) : (
           <div style={{ overflowX: 'auto', padding: '0 21px 21px' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>

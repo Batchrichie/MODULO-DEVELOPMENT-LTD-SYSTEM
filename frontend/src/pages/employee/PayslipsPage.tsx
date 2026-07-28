@@ -78,20 +78,13 @@ export function PayslipsPage() {
   }
 
   async function loadEmployee() {
-    // Prefer backend-provided caller-scoped profile. Falls back to legacy lookup only if needed.
     const profileResult = await fetchMyProfile()
     if (profileResult.ok) {
       setEmployee(profileResult.data)
       return
     }
 
-    // Legacy fallback: try fetchMyEmployeeRecord (may fail due to backend restrictions).
-    const legacy = await fetchMyEmployeeRecord(appUser?.email ?? undefined)
-    if (!legacy.ok) {
-      setEmployee(null)
-      return
-    }
-    setEmployee(legacy.data)
+    setEmployee(null)
   }
 
   const employeeName = employee?.full_name ?? employee?.email ?? 'Employee'

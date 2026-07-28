@@ -473,9 +473,17 @@ export function PayrollPage() {
         <div className="exec-dash__panel--standalone">
           <div className="exec-dash__panel-title">Payslips for created run</div>
           {!selectedRunId ? (
-            <div className="exec-dash__state-card exec-dash__state-card--empty"><h2 className="exec-dash__state-title">No run selected</h2><p className="exec-dash__state-message">Create a run and click “View payslips” to inspect its inline payslips.</p></div>
+            <EmptyState
+              icon="📄"
+              title="No run selected"
+              description="Create a payroll run and click View payslips to inspect generated payslip rows."
+            />
           ) : selectedRunPayslips.length === 0 ? (
-            <div className="exec-dash__state-card exec-dash__state-card--empty"><h2 className="exec-dash__state-title">No payslips returned</h2><p className="exec-dash__state-message">The create response did not include payslip rows.</p></div>
+            <EmptyState
+              icon="🧾"
+              title="No payslips returned"
+              description="The payroll run response did not include payslip rows."
+            />
           ) : (
             <>
               <div className="table-wrapper">

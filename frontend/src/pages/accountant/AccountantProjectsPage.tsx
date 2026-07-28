@@ -234,7 +234,11 @@ export function AccountantProjectsPage() {
         ) : error ? (
           <div className="exec-dash__state-card exec-dash__state-card--error"><h2 className="exec-dash__state-title">Unable to load</h2><p className="exec-dash__state-message">{error}</p></div>
         ) : !projects.length ? (
-          <div className="exec-dash__state-card exec-dash__state-card--empty"><h2 className="exec-dash__state-title">No projects found</h2><p className="exec-dash__state-message">Create a project to begin tracking revenue and budget.</p></div>
+          <EmptyState
+            icon="📁"
+            title="No projects found"
+            description="Create a project to begin tracking revenue and budget."
+          />
         ) : (
           <div className="table-wrapper">
             <table className="data-table">
