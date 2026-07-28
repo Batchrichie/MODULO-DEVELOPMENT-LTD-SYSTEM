@@ -820,6 +820,18 @@
   grid-column: 1 / -1;
 }
 
+.split-field-row {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.25rem;
+  flex-wrap: wrap;
+}
+
+.split-field-row .form-field__input {
+  flex: 1 1 0;
+  min-height: 2.75rem;
+}
+
 /* Screenshot-style pill/rounded inputs: upgrade form-field visuals */
 .form-field {
   min-width: 0;

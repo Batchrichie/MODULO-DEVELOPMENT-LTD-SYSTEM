@@ -186,22 +186,6 @@ function App() {
         })}
       </Route>
 
-      <Route
-        path="/admin/*"
-        element={
-          <RouteGuard allowedRoles={['Admin']}>
-            <PortalLayout role="Admin" />
-          </RouteGuard>
-        }
-      >
-        {createPortalChildRoutes(PORTAL_NAV.Admin, {
-          '/admin/user-management': <UserManagementPage />,
-          '/admin/roles-permissions': <RolesPermissionsPage />,
-          '/admin/audit-log': <AuditLogPage />,
-          '/admin/security-monitoring': <SecurityMonitoringPage />,
-        })}
-      </Route>
-
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )

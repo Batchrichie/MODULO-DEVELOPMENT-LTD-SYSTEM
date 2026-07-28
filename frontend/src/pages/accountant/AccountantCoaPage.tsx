@@ -201,25 +201,27 @@ export function AccountantCoaPage() {
           <table className="data-table">
             <thead>
               <tr>
-                <th style={{ textAlign: 'left', padding: '0.5rem' }}>Code</th>
-                <th style={{ textAlign: 'left', padding: '0.5rem' }}>Name</th>
-                <th style={{ textAlign: 'left', padding: '0.5rem' }}>Type</th>
-                <th style={{ textAlign: 'left', padding: '0.5rem' }}>Reporting Group</th>
-                <th style={{ textAlign: 'left', padding: '0.5rem' }}>Status</th>
-                <th style={{ textAlign: 'left', padding: '0.5rem' }}>Actions</th>
+                <th>Code</th>
+                <th>Name</th>
+                <th>Type</th>
+                <th>Reporting Group</th>
+                <th>Status</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {accounts.map((account) => (
                 <tr key={account.account_id ?? account.id ?? account.name}>
-                  <td style={{ padding: '0.5rem' }}>{account.code ?? '—'}</td>
-                  <td style={{ padding: '0.5rem' }}>{account.name ?? '—'}</td>
-                  <td style={{ padding: '0.5rem' }}>{account.type ?? '—'}</td>
-                  <td style={{ padding: '0.5rem' }}>{account.reporting_group ?? '—'}</td>
-                  <td style={{ padding: '0.5rem' }}>{account.is_postable === false ? 'Inactive' : 'Active'}</td>
-                  <td style={{ padding: '0.5rem' }}>
-                    <button type="button" className="button button--secondary" onClick={() => { setActiveId(account.account_id ?? account.id ?? null); setForm({ code: account.code ?? '', name: account.name ?? '', type: account.type ?? (coaRef.account_types[0] ?? 'Asset'), reporting_group: account.reporting_group ?? '', payment_method_type: account.payment_method_type ?? PAYMENT_METHOD_NONE_SENTINEL, account_number: account.account_number ?? '', provider_name: account.provider_name ?? '' }); setFormError(null); setShowModal(true); }}>Edit</button>{' '}
-                    <button type="button" className="button button--secondary" onClick={() => void handleDeactivate(account.account_id ?? account.id ?? '')}>Deactivate</button>
+                  <td>{account.code ?? '—'}</td>
+                  <td>{account.name ?? '—'}</td>
+                  <td>{account.type ?? '—'}</td>
+                  <td>{account.reporting_group ?? '—'}</td>
+                  <td>{account.is_postable === false ? 'Inactive' : 'Active'}</td>
+                  <td>
+                    <div className="data-table__actions">
+                      <button type="button" className="button button--secondary" onClick={() => { setActiveId(account.account_id ?? account.id ?? null); setForm({ code: account.code ?? '', name: account.name ?? '', type: account.type ?? (coaRef.account_types[0] ?? 'Asset'), reporting_group: account.reporting_group ?? '', payment_method_type: account.payment_method_type ?? PAYMENT_METHOD_NONE_SENTINEL, account_number: account.account_number ?? '', provider_name: account.provider_name ?? '' }); setFormError(null); setShowModal(true); }}>Edit</button>
+                      <button type="button" className="button button--secondary" onClick={() => void handleDeactivate(account.account_id ?? account.id ?? '')}>Deactivate</button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -282,42 +284,42 @@ export function AccountantCoaPage() {
                 <label className="form-field">
                   <span className="form-field__label">Account code</span>
                   <input
+                    className="form-field__input"
                     value={form.code}
                     placeholder={suggestedCodePlaceholder}
                     onChange={(event) => setForm((current) => ({ ...current, code: event.target.value }))}
-                    style={{ display: 'block', width: '100%', marginTop: '0.25rem', minHeight: '2.75rem' }}
                   />
                 </label>
                 <label className="form-field">
                   <span className="form-field__label">Account type</span>
                   <select
+                    className="form-field__input"
                     value={form.type}
                     onChange={(event) => setForm((current) => ({ ...current, type: event.target.value }))}
                     required
-                    style={{ display: 'block', width: '100%', marginTop: '0.25rem', minHeight: '2.75rem' }}
                   >
                     {coaRef.account_types.map((typeOption) => (
                       <option key={typeOption} value={typeOption}>{typeOption}</option>
                     ))}
                   </select>
                 </label>
-                <label className="form-field" style={{ gridColumn: '1 / -1' }}>
+                <label className="form-field form-field--full">
                   <span className="form-field__label">Account name</span>
                   <input
+                    className="form-field__input"
                     value={form.name}
                     placeholder="e.g. Petty Cash"
                     onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
                     required
-                    style={{ display: 'block', width: '100%', marginTop: '0.25rem', minHeight: '2.75rem' }}
                   />
                 </label>
                 <label className="form-field">
                   <span className="form-field__label">Reporting group</span>
                   <select
+                    className="form-field__input"
                     value={form.reporting_group}
                     onChange={(event) => setForm((current) => ({ ...current, reporting_group: event.target.value }))}
                     required
-                    style={{ display: 'block', width: '100%', marginTop: '0.25rem', minHeight: '2.75rem' }}
                   >
                     <option value="">
                       {refLoading && coaRef.reporting_groups.length === 0
@@ -334,9 +336,9 @@ export function AccountantCoaPage() {
                 <label className="form-field">
                   <span className="form-field__label">Payment method (optional)</span>
                   <select
+                    className="form-field__input"
                     value={form.payment_method_type}
                     onChange={(event) => setForm((current) => ({ ...current, payment_method_type: event.target.value }))}
-                    style={{ display: 'block', width: '100%', marginTop: '0.25rem', minHeight: '2.75rem' }}
                   >
                     <option value={PAYMENT_METHOD_NONE_SENTINEL}>Not a payment account</option>
                     {coaRef.payment_methods.map((pm) => (
@@ -346,20 +348,20 @@ export function AccountantCoaPage() {
                     ))}
                   </select>
                 </label>
-                <label className="form-field" style={{ gridColumn: '1 / -1' }}>
+                <label className="form-field form-field--full">
                   <span className="form-field__label">Provider / account number (optional)</span>
-                  <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.25rem' }}>
+                  <div className="split-field-row">
                     <input
+                      className="form-field__input"
                       value={form.provider_name}
                       placeholder="e.g. GCB"
                       onChange={(event) => setForm((current) => ({ ...current, provider_name: event.target.value }))}
-                      style={{ flex: 1, minHeight: '2.75rem' }}
                     />
                     <input
+                      className="form-field__input"
                       value={form.account_number}
                       placeholder="e.g. 0123456789"
                       onChange={(event) => setForm((current) => ({ ...current, account_number: event.target.value }))}
-                      style={{ flex: 1, minHeight: '2.75rem' }}
                     />
                   </div>
                 </label>
