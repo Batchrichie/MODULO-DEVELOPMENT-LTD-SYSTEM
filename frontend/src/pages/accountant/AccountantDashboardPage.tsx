@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { formatMoneyGhs } from '../../lib/formatMoney'
+import { EmptyState } from '../../components/EmptyState'
+import { FormErrorBanner } from '../../components/FormErrorBanner'
 import { PendingBackendNotice } from '../../components/PendingBackendNotice'
 import {
   fetchDashboardAccountantTasks,
@@ -127,6 +129,7 @@ export function AccountantDashboardPage() {
           <p>Monitor ledger health, cash flow, and accountant tasks from a central view.</p>
         </div>
       </header>
+      {error && <FormErrorBanner message={error} label="Partial dashboard load" />}
 
       <section className="admin-dashboard__stats" aria-label="Accounting dashboard metrics">
         <div className="stat-card">

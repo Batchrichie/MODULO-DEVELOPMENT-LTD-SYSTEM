@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { formatMoneyGhs } from '../../lib/formatMoney'
+import { EmptyState } from '../../components/EmptyState'
+import { FormErrorBanner } from '../../components/FormErrorBanner'
 import { getRecords, reportBudgetVsActual } from '../../lib/rpc/accountant'
 import { PendingBackendNotice } from '../../components/PendingBackendNotice'
 import '../../styles/executive-dashboard.css'
@@ -85,52 +87,66 @@ export function AccountantBudgetVsActualPage() {
       </header>
 
       <section className="users-card">
-        <div className="users-card__header">
-          <div>
-            <h2>Budget report</h2>
-            <p>Project-level totals-only budget vs actual reporting.</p>
-          </div>
-          <div className="users-card__actions">
-            <label className="form-field" style={{ margin: 0, width: '100%', minWidth: 0 }}>
-              <span className="form-field__label">Project</span>
-              <select value={selectedProject} onChange={(event) => setSelectedProject(event.target.value)}>
-                <option value="">Select project</option>
-                {projects.map((project) => (
-                  <option key={project.project_id ?? project.id} value={project.project_id ?? project.id}>{project.project_name ?? project.project_id ?? 'Unnamed project'}</option>
-                ))}
-              </select>
-            </label>
-            <button type="button" className="button button--primary" onClick={() => void loadReport()} disabled={!selectedProject || loadingReport}>
-              {loadingReport ? 'Loading…' : 'Load report'}
-            </button>
-          </div>
-        </div>
+        {error && <FormErrorBanner message={error} />}
 
-        <PendingBackendNotice
-          inline
-          title="Simplified reporting"
-          description="This page uses the backend's totals-only budget vs actual endpoint. Category breakdown is pending a richer reporting API."
-          className="pending-backend--standalone"
-        />
-
-        {error ? (
-          <div className="exec-dash__state-card exec-dash__state-card--error"><h2 className="exec-dash__state-title">Unable to load report</h2><p className="exec-dash__state-message">{error}</p></div>
-        ) : loadingReport ? (
-          <div className="exec-dash__state-card"><h2 className="exec-dash__state-title">Loading report</h2><p className="exec-dash__state-message">Requesting budget vs actual for the selected project.</p></div>
-        ) : !report ? (
-          <div className="exec-dash__state-card exec-dash__state-card--empty"><h2 className="exec-dash__state-title">No report selected</h2><p className="exec-dash__state-message">Select a project and click Load report to view totals.</p></div>
+        {!projects.length ? (
+          <EmptyState
+            icon="📁"
+            title="No projects available"
+            description="Create or import a project before budget vs actual comparisons can be generated."
+          />
         ) : (
-          <div className="exec-dash__panel exec-dash__panel--standalone">
-            <div className="exec-dash__panel-title">Result summary</div>
-            <div className="summary-box">
-              <div className="summary-box__row"><span className="summary-box__label">Project</span><span className="summary-box__value">{report.project_name ?? report.project_id ?? '—'}</span></div>
-              <div className="summary-box__row"><span className="summary-box__label">Total budget</span><span className="summary-box__value data-table__num">{formatMoneyGhs(report.total_budget ?? 0)}</span></div>
-              <div className="summary-box__row"><span className="summary-box__label">Total actual</span><span className="summary-box__value data-table__num">{formatMoneyGhs(report.total_actual ?? 0)}</span></div>
-              <div className="summary-box__row"><span className="summary-box__label">Variance</span><span className="summary-box__value data-table__num">{formatMoneyGhs(report.variance ?? 0)}</span></div>
-              <div className="summary-box__row summary-box__row--total"><span className="summary-box__label">Variance %</span><span className="summary-box__value data-table__num">{typeof report.variance_pct === 'number' ? `${report.variance_pct.toFixed(2)}%` : '—'}</span></div>
+          <>
+            <div className="users-card__header">
+              <div>
+                <h2>Budget report</h2>
+                <p>Project-level totals-only budget vs actual reporting.</p>
+              </div>
+              <div className="users-card__actions">
+                <label className="form-field">
+                  <span className="form-field__label">Project</span>
+                  <select value={selectedProject} onChange={(event) => setSelectedProject(event.target.value)}>
+                    <option value="">Select project</option>
+                    {projects.map((project) => (
+                      <option key={project.project_id ?? project.id} value={project.project_id ?? project.id}>{project.project_name ?? project.project_id ?? 'Unnamed project'}</option>
+                    ))}
+                  </select>
+                </label>
+                <button type="button" className="button button--primary" onClick={() => void loadReport()} disabled={!selectedProject || loadingReport}>
+                  {loadingReport ? 'Loading…' : 'Load report'}
+                </button>
+              </div>
             </div>
-            {report.limitation && <p className="summary-box__note">{report.limitation}</p>}
-          </div>
+
+            <PendingBackendNotice
+              inline
+              title="Simplified reporting"
+              description="This page uses the backend's totals-only budget vs actual endpoint. Category breakdown is pending a richer reporting API."
+              className="pending-backend--standalone"
+            />
+
+            {loadingReport ? (
+              <div className="exec-dash__state-card"><h2 className="exec-dash__state-title">Loading report</h2><p className="exec-dash__state-message">Requesting budget vs actual for the selected project.</p></div>
+            ) : !report ? (
+              <EmptyState
+                icon="📊"
+                title="No report selected"
+                description="Select a project and click Load report to view totals."
+              />
+            ) : (
+              <div className="exec-dash__panel exec-dash__panel--standalone">
+                <div className="exec-dash__panel-title">Result summary</div>
+                <div className="summary-box">
+                  <div className="summary-box__row"><span className="summary-box__label">Project</span><span className="summary-box__value">{report.project_name ?? report.project_id ?? '—'}</span></div>
+                  <div className="summary-box__row"><span className="summary-box__label">Total budget</span><span className="summary-box__value data-table__num">{formatMoneyGhs(report.total_budget ?? 0)}</span></div>
+                  <div className="summary-box__row"><span className="summary-box__label">Total actual</span><span className="summary-box__value data-table__num">{formatMoneyGhs(report.total_actual ?? 0)}</span></div>
+                  <div className="summary-box__row"><span className="summary-box__label">Variance</span><span className="summary-box__value data-table__num">{formatMoneyGhs(report.variance ?? 0)}</span></div>
+                  <div className="summary-box__row summary-box__row--total"><span className="summary-box__label">Variance %</span><span className="summary-box__value data-table__num">{typeof report.variance_pct === 'number' ? `${report.variance_pct.toFixed(2)}%` : '—'}</span></div>
+                </div>
+                {report.limitation && <p className="summary-box__note">{report.limitation}</p>}
+              </div>
+            )}
+          </>
         )}
       </section>
     </article>

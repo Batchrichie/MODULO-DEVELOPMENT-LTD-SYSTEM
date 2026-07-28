@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { formatMoneyGhs } from '../../lib/formatMoney'
+import { EmptyState } from '../../components/EmptyState'
+import { FormErrorBanner } from '../../components/FormErrorBanner'
 import { getRecords } from '../../lib/rpc/accountant'
 import '../../styles/executive-dashboard.css'
 
@@ -107,7 +109,16 @@ export function AccountantGeneralLedgerPage() {
             <p>Review ledger journals and line-level postings by journal.</p>
           </div>
         </header>
-        <section className="users-card"><div className="exec-dash__state-card exec-dash__state-card--error"><h2 className="exec-dash__state-title">Unable to load ledger</h2><p className="exec-dash__state-message">{error}</p><p className="exec-dash__state-hint">The general ledger requires journal and journal_lines access.</p></div></section>
+        <section className="users-card">
+          <div className="users-card__header">
+            <div>
+              <h2>Ledger overview</h2>
+              <p>Use this screen to inspect journal headers and their underlying lines.</p>
+            </div>
+          </div>
+          <FormErrorBanner message={error} label="Unable to load ledger" />
+          <p className="exec-dash__state-hint">The general ledger requires journal and journal_lines access.</p>
+        </section>
       </article>
     )
   }
@@ -129,7 +140,7 @@ export function AccountantGeneralLedgerPage() {
             <p>Use this screen to inspect journal headers and their underlying lines.</p>
           </div>
           <div className="users-card__actions">
-            <label className="form-field" style={{ margin: 0, width: '100%', minWidth: 0 }}>
+            <label className="form-field">
               <span className="form-field__label">Search journals</span>
               <input value={filter} onChange={(event) => setFilter(event.target.value)} placeholder="Search by reference, period, or status" />
             </label>
@@ -137,11 +148,15 @@ export function AccountantGeneralLedgerPage() {
           </div>
         </div>
 
-        {!filteredJournals.length ? (
-          <div className="exec-dash__state-card exec-dash__state-card--empty"><h2 className="exec-dash__state-title">No journal entries found</h2><p className="exec-dash__state-message">There are no journals matching the current filter.</p></div>
-        ) : (
-          <div className="exec-dash__panel exec-dash__panel--standalone">
-            <div className="exec-dash__panel-title">Journal entries</div>
+        <div className="exec-dash__panel exec-dash__panel--standalone">
+          <div className="exec-dash__panel-title">Journal entries</div>
+          {filteredJournals.length === 0 ? (
+            <EmptyState
+              icon="🧾"
+              title="No journal entries found"
+              description="There are no journals matching the current search filter."
+            />
+          ) : (
             <div className="table-wrapper">
               <table className="data-table">
                 <thead>
@@ -172,13 +187,17 @@ export function AccountantGeneralLedgerPage() {
                 </tbody>
               </table>
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
         <div className="exec-dash__panel exec-dash__panel--standalone">
           <div className="exec-dash__panel-title">Selected journal lines</div>
           {lines.length === 0 ? (
-            <p className="exec-dash__state-message">No ledger lines are available. The backend may not expose the `journal_lines` resource.</p>
+            <EmptyState
+              icon="📄"
+              title="No ledger lines available"
+              description="No ledger lines are available. The backend may not expose the `journal_lines` resource."
+            />
           ) : (
             <div className="table-wrapper">
               <table className="data-table">

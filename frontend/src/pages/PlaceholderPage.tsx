@@ -14,7 +14,7 @@ export function PlaceholderPage({ title, breadcrumb }: PlaceholderPageProps) {
     <article className="placeholder-page">
       {breadcrumb && <p className="placeholder-page__breadcrumb">{breadcrumb}</p>}
       <div className="placeholder-page__card">
-        <span className="placeholder-page__badge">Coming in REBUILD-3+ — not yet built</span>
+        <span className="placeholder-page__badge">Coming soon — not yet built</span>
         <h2 className="placeholder-page__title">{title}</h2>
         <p className="placeholder-page__body">
           This is a navigation placeholder only. No backend is connected and no data is shown
@@ -44,7 +44,7 @@ function UserManagementPage() {
       </section>
       <section className="users-card">
         <div className="users-card__header"><div><h2>All Users</h2><p>View and manage everyone with access to {companyProfile.name}.</p></div><div className="users-card__actions"><button type="button" className="button button--secondary"><svg viewBox="0 0 24 24"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 19h14" /></svg>Export</button><button type="button" className="button button--primary">+ Add User</button></div></div>
-        <div className="users-card__empty"><div className="empty-illustration"><span /><span /><span /><i /></div><h2>Coming in REBUILD-3+</h2><p>User management workflows are being prepared. This workspace will soon show your team, roles, and access activity.</p><span className="status-pill">Not yet built</span></div>
+        <div className="users-card__empty"><div className="empty-illustration"><span /><span /><span /><i /></div><h2>Coming soon</h2><p>User management workflows are being prepared. This workspace will soon show your team, roles, and access activity.</p><span className="status-pill">Not yet built</span></div>
       </section>
     </article>
   )
