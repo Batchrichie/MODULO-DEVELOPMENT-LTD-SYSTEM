@@ -188,6 +188,111 @@
   font-size: 0.8125rem;
 }
 
+.exec-screen {
+  max-width: 72rem;
+}
+
+.exec-screen__header {
+  margin-bottom: var(--space-lg);
+}
+
+.exec-screen__toolbar {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-md);
+  margin-bottom: var(--space-md);
+}
+
+.exec-screen__panel {
+  margin-bottom: var(--space-md);
+  padding: var(--space-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-elevated);
+}
+
+.exec-screen__panel--standalone {
+  margin: 0;
+}
+
+.exec-screen__section-toggle {
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+  align-items: center;
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+}
+
+.exec-screen__section-body {
+  margin-top: var(--space-sm);
+}
+
+.exec-screen__definition-list {
+  display: grid;
+  gap: var(--space-sm);
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+.exec-screen__definition-list dt {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  margin-bottom: 0.25rem;
+}
+
+.exec-screen__definition-list dd {
+  margin: 0;
+  font-weight: 700;
+}
+
+.exec-screen__note {
+  margin-top: var(--space-sm);
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+}
+
+.exec-screen__grid {
+  display: grid;
+  gap: var(--space-md);
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  margin-bottom: var(--space-md);
+}
+
+.exec-screen__card {
+  padding: var(--space-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-elevated);
+}
+
+.exec-screen__card--liability {
+  border-color: var(--color-error-border);
+}
+
+.exec-screen__expand-row td {
+  padding: 0;
+  border: none;
+}
+
+.exec-screen__expand-row .exec-screen__panel {
+  margin: 0;
+}
+
+.exec-screen__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  background: var(--color-bg-muted);
+}
+
 .exec-dash__empty-inline {
   margin: 0;
   color: var(--color-text-muted);

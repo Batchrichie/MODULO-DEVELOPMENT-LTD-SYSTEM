@@ -36,6 +36,12 @@ import { AuditLogPage } from './pages/admin/AuditLogPage'
 import { RolesPermissionsPage } from './pages/admin/RolesPermissionsPage'
 import { SecurityMonitoringPage } from './pages/admin/SecurityMonitoringPage'
 import { UserManagementPage } from './pages/admin/UserManagementPage'
+import { FinancialOverviewPage } from './pages/executive/FinancialOverviewPage'
+import { ProjectPortfolioPage } from './pages/executive/ProjectPortfolioPage'
+import { EquipmentRentalsPage } from './pages/executive/EquipmentRentalsPage'
+import { TaxCompliancePage } from './pages/executive/TaxCompliancePage'
+import { ReportsPage } from './pages/executive/ReportsPage'
+import { AlertsPage } from './pages/executive/AlertsPage'
 import { createPortalChildRoutes } from './routes/portalRoutes'
 
 function RootRedirect() {
@@ -73,6 +79,12 @@ function App() {
       >
         {createPortalChildRoutes(PORTAL_NAV.CEO, {
           '/executive/dashboard': <ExecutiveDashboardPage />,
+          '/executive/financial-overview': <FinancialOverviewPage />,
+          '/executive/project-portfolio': <ProjectPortfolioPage />,
+          '/executive/equipment-rentals': <EquipmentRentalsPage />,
+          '/executive/tax-compliance': <TaxCompliancePage />,
+          '/executive/reports': <ReportsPage />,
+          '/executive/alerts': <AlertsPage />,
         })}
       </Route>
 

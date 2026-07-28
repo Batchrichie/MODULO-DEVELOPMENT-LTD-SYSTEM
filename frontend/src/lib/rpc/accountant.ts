@@ -364,6 +364,34 @@ export async function fetchTrialBalance(asOf: string): Promise<AccountantRpcResu
   return { ok: true, data: rows as TrialBalanceRow[], raw: result.raw }
 }
 
+export async function reportIncomeStatement(
+  from: string,
+  to: string,
+): Promise<AccountantRpcResult<{ [key: string]: number | null }>> {
+  return callRpc('report_income_statement', {
+    p_from: from,
+    p_to: to,
+  })
+}
+
+export async function reportSofp(
+  asOf: string,
+): Promise<AccountantRpcResult<{ [key: string]: number | null }>> {
+  return callRpc('report_sofp', {
+    p_as_of: asOf,
+  })
+}
+
+export async function reportCashFlow(
+  from: string,
+  to: string,
+): Promise<AccountantRpcResult<{ [key: string]: number | null }>> {
+  return callRpc('report_cash_flow', {
+    p_from: from,
+    p_to: to,
+  })
+}
+
 export async function fetchDashboardAccountantTasks(): Promise<AccountantRpcResult<DashboardTask[]>> {
   const result = await callRpc<any>('dashboard_accountant_tasks', {})
   if (!result.ok) return result
