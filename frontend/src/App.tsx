@@ -26,7 +26,12 @@ import { RentalsPage } from './pages/accountant/RentalsPage'
 import { TaxPage } from './pages/accountant/TaxPage'
 import { AccountantProjectsPage } from './pages/accountant/AccountantProjectsPage'
 import { MyProjectsPage } from './pages/projectManager/MyProjectsPage'
+import { DocumentsPage } from './pages/projectManager/DocumentsPage'
 import { PayslipsPage } from './pages/employee/PayslipsPage'
+import { MyProfilePage } from './pages/employee/MyProfilePage'
+import { LeavePage } from './pages/employee/LeavePage'
+import { AssignedProjectsPage } from './pages/employee/AssignedProjectsPage'
+import { AnnouncementsPage } from './pages/employee/AnnouncementsPage'
 import { CompletionAssessmentsPage } from './pages/projectManager/CompletionAssessmentsPage'
 import { BudgetTrackingPage } from './pages/projectManager/BudgetTrackingPage'
 import { ProjectCostingPage } from './pages/projectManager/ProjectCostingPage'
@@ -35,6 +40,7 @@ import { SiteReportsReviewPage } from './pages/accountant/SiteReportsReviewPage'
 import { AuditLogPage } from './pages/admin/AuditLogPage'
 import { RolesPermissionsPage } from './pages/admin/RolesPermissionsPage'
 import { SecurityMonitoringPage } from './pages/admin/SecurityMonitoringPage'
+import { SystemSettingsPage } from './pages/admin/SystemSettingsPage'
 import { UserManagementPage } from './pages/admin/UserManagementPage'
 import { FinancialOverviewPage } from './pages/executive/FinancialOverviewPage'
 import { ProjectPortfolioPage } from './pages/executive/ProjectPortfolioPage'
@@ -133,6 +139,7 @@ function App() {
           '/project-manager/completion-assessments': <CompletionAssessmentsPage />,
           '/project-manager/budget-tracking': <BudgetTrackingPage />,
           '/project-manager/site-reports': <SiteReportsPage />,
+          '/project-manager/documents': <DocumentsPage />,
         })}
       </Route>
 
@@ -145,7 +152,28 @@ function App() {
         }
       >
         {createPortalChildRoutes(PORTAL_NAV.Employee, {
+          '/employee/my-profile': <MyProfilePage />,
           '/employee/payslips': <PayslipsPage />,
+          '/employee/leave': <LeavePage />,
+          '/employee/assigned-projects': <AssignedProjectsPage />,
+          '/employee/announcements': <AnnouncementsPage />,
+        })}
+      </Route>
+
+      <Route
+        path="/admin/*"
+        element={
+          <RouteGuard allowedRoles={['Admin']}>
+            <PortalLayout role="Admin" />
+          </RouteGuard>
+        }
+      >
+        {createPortalChildRoutes(PORTAL_NAV.Admin, {
+          '/admin/user-management': <UserManagementPage />,
+          '/admin/roles-permissions': <RolesPermissionsPage />,
+          '/admin/audit-log': <AuditLogPage />,
+          '/admin/security-monitoring': <SecurityMonitoringPage />,
+          '/admin/system-settings': <SystemSettingsPage />,
         })}
       </Route>
 
