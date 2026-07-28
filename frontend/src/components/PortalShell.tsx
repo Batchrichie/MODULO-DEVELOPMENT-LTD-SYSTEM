@@ -41,7 +41,7 @@ export function PortalShell({ role, navConfig }: PortalShellProps) {
   const viewport = useViewportMode()
   const [drawerOpen, setDrawerOpen] = useState(false)
 
-  const collapsed = false
+  const collapsed = viewport === 'tablet'
   const isPhone = viewport === 'phone'
   const pageTitle = getNavLabelForPath(role, location.pathname)
 
@@ -92,7 +92,7 @@ export function PortalShell({ role, navConfig }: PortalShellProps) {
         <>
           <Sidebar
             config={navConfig}
-            collapsed={false}
+            collapsed={collapsed}
             drawerOpen={drawerOpen}
             onCloseDrawer={() => setDrawerOpen(false)}
           />

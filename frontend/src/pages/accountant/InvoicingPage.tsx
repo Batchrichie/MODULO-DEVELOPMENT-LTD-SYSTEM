@@ -231,10 +231,10 @@ export function InvoicingPage() {
 
             {statusMessage && <div className="exec-dash__state-card exec-dash__state-card--success exec-dash__state-card--inline"><h2 className="exec-dash__state-title">Success</h2><p className="exec-dash__state-message">{statusMessage}</p></div>}
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <h3 style={{ margin: 0 }}>Invoices</h3>
-              <div>
-                <button type="button" className="button button--secondary" onClick={() => void loadInitialData()}>Refresh</button>{' '}
+            <div className="invoice-page__header">
+              <h3 className="invoice-page__title">Invoices</h3>
+              <div className="invoice-page__header-actions">
+                <button type="button" className="button button--secondary" onClick={() => void loadInitialData()}>Refresh</button>
                 <button type="button" className="button button--primary" onClick={() => { setForm(emptyForm()); setFormError(null); setShowModal(true) }}>New Invoice</button>
               </div>
             </div>
@@ -248,7 +248,7 @@ export function InvoicingPage() {
               maxWidth={760}
               footer={(
                 <>
-                  <div className="summary-box" style={{ marginRight: '1rem' }}>
+                  <div className="summary-box invoice-page__summary">
                     <div className="summary-box__row">
                       <strong>Subtotal:</strong>
                       <span>{formatMoneyGhs(subtotal)}</span>

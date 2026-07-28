@@ -123,6 +123,15 @@ export type PayslipRecord = {
   [key: string]: unknown
 }
 
+export type DashboardTask = {
+  id?: string
+  title?: string | null
+  due_date?: string | null
+  status?: string | null
+  description?: string | null
+  [key: string]: unknown
+}
+
 export type MyEmployeeRecord = {
   employee_id?: string
   id?: string
@@ -355,6 +364,19 @@ export async function fetchTrialBalance(asOf: string): Promise<AccountantRpcResu
   return { ok: true, data: rows as TrialBalanceRow[], raw: result.raw }
 }
 
+export async function fetchDashboardAccountantTasks(): Promise<AccountantRpcResult<DashboardTask[]>> {
+  const result = await callRpc<any>('dashboard_accountant_tasks', {})
+  if (!result.ok) return result
+
+  const rows = Array.isArray(result.data)
+    ? result.data
+    : Array.isArray((result.data as any)?.rows)
+    ? (result.data as any).rows
+    : []
+
+  return { ok: true, data: rows as DashboardTask[], raw: result.raw }
+}
+
 export async function invoiceCreate(payload: Record<string, unknown>): Promise<AccountantRpcResult<Invoice>> {
   return callRpc<Invoice>('invoice_create', {
     p_payload: payload,
@@ -424,25 +446,22 @@ export async function fetchMyPayslips(
   page = 1,
   limit = 25,
 ): Promise<AccountantRpcResult<PayslipRecord[]>> {
-  const result = await callRpc<PayslipRecord[]>('get_my_payslips', {
-    p_page: page,
-    p_limit: limit,
-  })
-
-  if (!result.ok) return result
-
-  const rows = Array.isArray(result.data) ? result.data : (result.data as any)?.rows || []
-  return { ok: true, data: rows as PayslipRecord[], raw: result.raw }
+  return getRecords<PayslipRecord[]>('payslips', page, limit)
 }
 
-/**
- * Fetch the signed-in employee's profile from the backend.
- * Backend should implement `api.get_my_profile()` returning the caller's employee record.
- */
 export async function fetchMyProfile(): Promise<AccountantRpcResult<MyEmployeeRecord>> {
-  const result = await callRpc<MyEmployeeRecord>('get_my_profile', {})
-  if (!result.ok) return result
-  return { ok: true, data: result.data as MyEmployeeRecord, raw: result.raw }
+  const { data: authData, error: authError } = await supabase.auth.getUser()
+  const userEmail = authData?.user?.email
+
+  if (authError || !userEmail) {
+    return {
+      ok: false,
+      error: authError?.message ?? 'Unable to resolve current user email',
+      code: 'NO_USER_EMAIL',
+    }
+  }
+
+  return fetchMyEmployeeRecord(userEmail)
 }
 
 export async function taxRatesUpdate(taxType: string, rate: number): Promise<AccountantRpcResult<{ success: boolean }>> {
@@ -567,4 +586,43 @@ export function normalizeTaxRates(rows: TaxRateSetting[]): TaxRates {
 
     return acc
   }, {} as TaxRates)
+}
+
+export type SiteReport = {
+  report_id?: string
+  id?: string
+  report_date?: string | null
+  notes?: string | null
+  status?: string | null
+  rejection_reason?: string | null
+  submitted_by?: string | null
+  submitted_by_name?: string | null
+  submitted_by_id?: string | null
+  project?: string | null
+  project_name?: string | null
+  project_id?: string | null
+  created_at?: string | null
+  [key: string]: unknown
+}
+
+export async function listMySiteReports(page = 1, limit = 50): Promise<AccountantRpcResult<SiteReport[]>> {
+  const result = await callRpc<SiteReport[]>('list_my_site_reports', { p_page: page, p_limit: limit })
+  if (!result.ok) return result
+  const rows = Array.isArray(result.data) ? result.data : (result.data as any)?.rows || []
+  return { ok: true, data: rows as SiteReport[], raw: result.raw }
+}
+
+export async function listPendingSiteReports(page = 1, limit = 100): Promise<AccountantRpcResult<SiteReport[]>> {
+  const result = await callRpc<SiteReport[]>('list_pending_site_reports', { p_page: page, p_limit: limit })
+  if (!result.ok) return result
+  const rows = Array.isArray(result.data) ? result.data : (result.data as any)?.rows || []
+  return { ok: true, data: rows as SiteReport[], raw: result.raw }
+}
+
+export async function siteReportApprove(reportId: string): Promise<AccountantRpcResult<{ success: boolean }>> {
+  return callRpc('site_report_approve', { p_report_id: reportId })
+}
+
+export async function siteReportReject(reportId: string, reason: string): Promise<AccountantRpcResult<{ success: boolean }>> {
+  return callRpc('site_report_reject', { p_report_id: reportId, p_reason: reason })
 }

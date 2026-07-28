@@ -49,7 +49,7 @@ export function DepreciationJournalPage() {
   }
 
   if (loading) {
-    return <article className="admin-dashboard"><header className="admin-dashboard__header"><div><p className="admin-dashboard__eyebrow">Asset Management</p><h1>Depreciation Journal</h1><p>Review monthly depreciation entries and their accounting impact.</p></div></header><section className="users-card"><div className="exec-dash__state-card"><h2 className="exec-dash__state-title">Loading depreciation journal</h2><p className="exec-dash__state-message">Fetching the depreciation journal resource view.</p></div></section></article>
+    return <article className="admin-dashboard"><header className="admin-dashboard__header"><div><p className="admin-dashboard__eyebrow">Asset Management</p><h1>Depreciation Journal</h1><p>Review monthly depreciation entries and their accounting impact.</p></div></header><section className="users-card"><div className="exec-dash__state-card"><h2 className="exec-dash__state-title">Loading depreciation journal</h2><p className="exec-dash__state-message">Fetching depreciation entries so you can review asset expense timing.</p></div></section></article>
   }
 
   if (error) {

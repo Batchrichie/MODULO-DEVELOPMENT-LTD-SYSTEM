@@ -76,7 +76,7 @@
 .exec-dash__row {
   display: grid;
   gap: var(--space-md);
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
   margin-bottom: var(--space-md);
   padding: 0 21px 21px;
 }
@@ -382,6 +382,28 @@
   border-radius: var(--radius-sm);
   color: var(--color-text);
   margin-bottom: var(--space-md);
+}
+
+.invoice-page__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-md);
+  margin-bottom: var(--space-md);
+}
+
+.invoice-page__title {
+  margin: 0;
+}
+
+.invoice-page__header-actions {
+  display: flex;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+
+.invoice-page__summary {
+  margin-right: var(--space-md);
 }
 
 .summary-box__row {
@@ -1021,7 +1043,7 @@
 /* ───────── Registry Toolbar (Search / Filter / Date / Refresh / Export / New) ────────── */
 .registry-toolbar {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: var(--space-md);
   padding: var(--space-md) var(--space-lg);
@@ -1034,6 +1056,12 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-sm);
+  min-width: 0;
+  width: 100%;
+}
+
+.registry-toolbar__search-row > * {
+  min-width: 0;
 }
 
 .registry-toolbar__actions {
@@ -1042,6 +1070,10 @@
   align-items: center;
   gap: var(--space-sm);
   justify-content: flex-end;
+}
+
+.registry-toolbar__actions .button {
+  min-width: 108px;
 }
 
 .search-field {

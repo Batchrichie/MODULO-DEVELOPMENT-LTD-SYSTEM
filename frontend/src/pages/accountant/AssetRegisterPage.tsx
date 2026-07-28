@@ -273,7 +273,7 @@ export function AssetRegisterPage() {
   }
 
   if (loading) {
-    return <article className="admin-dashboard"><header className="admin-dashboard__header"><div><p className="admin-dashboard__eyebrow">Asset Management</p><h1>Asset Register</h1><p>Review acquired fixed assets and their current status.</p></div></header><section className="users-card"><div className="exec-dash__state-card"><h2 className="exec-dash__state-title">Loading asset register</h2><p className="exec-dash__state-message">Fetching the asset registry from the generic resource RPC.</p></div></section></article>
+    return <article className="admin-dashboard"><header className="admin-dashboard__header"><div><p className="admin-dashboard__eyebrow">Asset Management</p><h1>Asset Register</h1><p>Review acquired fixed assets and their current status.</p></div></header><section className="users-card"><div className="exec-dash__state-card"><h2 className="exec-dash__state-title">Loading asset register</h2><p className="exec-dash__state-message">Fetching the asset register so you can review asset details and depreciation information.</p></div></section></article>
   }
 
   if (error) {

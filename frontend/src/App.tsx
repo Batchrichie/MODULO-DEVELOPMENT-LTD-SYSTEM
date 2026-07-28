@@ -8,8 +8,11 @@ import { ForgotPasswordPage } from './pages/ForgotPasswordPage'
 import { LoginPage } from './pages/LoginPage'
 import { ExecutiveDashboardPage } from './pages/executive/ExecutiveDashboardPage'
 import { AccountantCoaPage } from './pages/accountant/AccountantCoaPage'
+import { AccountantDashboardPage } from './pages/accountant/AccountantDashboardPage'
+import { AccountantGeneralLedgerPage } from './pages/accountant/AccountantGeneralLedgerPage'
 import { AccountantJournalEntriesPage } from './pages/accountant/AccountantJournalEntriesPage'
 import { AccountantTrialBalancePage } from './pages/accountant/AccountantTrialBalancePage'
+import { AccountantBudgetVsActualPage } from './pages/accountant/AccountantBudgetVsActualPage'
 import { InvoicingPage } from './pages/accountant/InvoicingPage'
 import { CustomerPaymentsPage } from './pages/accountant/CustomerPaymentsPage'
 import { ExpensesPage } from './pages/accountant/ExpensesPage'
@@ -21,11 +24,14 @@ import { PpeSchedulePage } from './pages/accountant/PpeSchedulePage'
 import { DepreciationJournalPage } from './pages/accountant/DepreciationJournalPage'
 import { RentalsPage } from './pages/accountant/RentalsPage'
 import { TaxPage } from './pages/accountant/TaxPage'
+import { AccountantProjectsPage } from './pages/accountant/AccountantProjectsPage'
 import { MyProjectsPage } from './pages/projectManager/MyProjectsPage'
 import { PayslipsPage } from './pages/employee/PayslipsPage'
 import { CompletionAssessmentsPage } from './pages/projectManager/CompletionAssessmentsPage'
 import { BudgetTrackingPage } from './pages/projectManager/BudgetTrackingPage'
 import { ProjectCostingPage } from './pages/projectManager/ProjectCostingPage'
+import { SiteReportsPage } from './pages/projectManager/SiteReportsPage'
+import { SiteReportsReviewPage } from './pages/accountant/SiteReportsReviewPage'
 import { AuditLogPage } from './pages/admin/AuditLogPage'
 import { RolesPermissionsPage } from './pages/admin/RolesPermissionsPage'
 import { SecurityMonitoringPage } from './pages/admin/SecurityMonitoringPage'
@@ -79,8 +85,10 @@ function App() {
         }
       >
         {createPortalChildRoutes(PORTAL_NAV.Accountant, {
+          '/accountant/dashboard': <AccountantDashboardPage />,
           '/accountant/chart-of-accounts': <AccountantCoaPage />,
           '/accountant/journal-entries': <AccountantJournalEntriesPage />,
+          '/accountant/general-ledger': <AccountantGeneralLedgerPage />,
           '/accountant/trial-balance': <AccountantTrialBalancePage />,
           '/accountant/invoicing-expenses/invoicing': <InvoicingPage />,
           '/accountant/invoicing-expenses/customer-payments': <CustomerPaymentsPage />,
@@ -92,7 +100,10 @@ function App() {
           '/accountant/asset-management/ppe-schedule': <PpeSchedulePage />,
           '/accountant/asset-management/depreciation-journal': <DepreciationJournalPage />,
           '/accountant/asset-management/rentals': <RentalsPage />,
+          '/accountant/site-reports-review': <SiteReportsReviewPage />,
+          '/accountant/projects': <AccountantProjectsPage />,
           '/accountant/compliance-tax/tax': <TaxPage />,
+          '/accountant/budgeting/budget-vs-actual': <AccountantBudgetVsActualPage />,
         })}
       </Route>
 
@@ -109,6 +120,7 @@ function App() {
           '/project-manager/project-costing': <ProjectCostingPage />,
           '/project-manager/completion-assessments': <CompletionAssessmentsPage />,
           '/project-manager/budget-tracking': <BudgetTrackingPage />,
+          '/project-manager/site-reports': <SiteReportsPage />,
         })}
       </Route>
 

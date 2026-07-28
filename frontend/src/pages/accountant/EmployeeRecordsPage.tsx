@@ -26,6 +26,7 @@ const emptyForm = (): EmployeeFormState => ({
 interface EmployeeRecord {
   employee_id?: string
   id?: string
+  name?: string | null
   full_name?: string | null
   email?: string | null
   phone?: string | null
@@ -88,6 +89,7 @@ export function EmployeeRecordsPage() {
     setFormError(null)
 
     const payload: Record<string, unknown> = {
+      name: form.full_name,
       full_name: form.full_name,
       email: form.email,
       phone: form.phone,
@@ -135,8 +137,9 @@ export function EmployeeRecordsPage() {
     return employees.filter((employee) => {
       if (filterCategory !== '__all__' && (employee.staff_category ?? '') !== filterCategory) return false
       if (!q) return true
+      const employeeName = (employee.full_name ?? employee.name ?? '').toLowerCase()
       return (
-        (employee.full_name ?? '').toLowerCase().includes(q) ||
+        employeeName.includes(q) ||
         (employee.email ?? '').toLowerCase().includes(q) ||
         (employee.phone ?? '').toLowerCase().includes(q) ||
         (employee.employment_status ?? '').toLowerCase().includes(q)
@@ -220,10 +223,11 @@ export function EmployeeRecordsPage() {
                   const catBadge = employee.staff_category
                     ? { label: employee.staff_category, tone: 'info' as const }
                     : { label: 'Unclassified', tone: 'muted' as const }
+                  const employeeName = employee.full_name ?? employee.name ?? '—'
                   return (
-                    <tr key={employee.employee_id ?? employee.id ?? employee.email ?? employee.full_name} className={employee.employment_status === 'Terminated' ? 'data-table__row--muted' : ''}>
+                    <tr key={employee.employee_id ?? employee.id ?? employee.email ?? employeeName} className={employee.employment_status === 'Terminated' ? 'data-table__row--muted' : ''}>
                       <td>
-                        <strong style={{ display: 'block' }}>{employee.full_name ?? '—'}</strong>
+                        <strong style={{ display: 'block' }}>{employeeName}</strong>
                       </td>
                       <td>{employee.email ?? '—'}</td>
                       <td>{employee.phone ?? '—'}</td>
@@ -242,7 +246,7 @@ export function EmployeeRecordsPage() {
                             onClick={() => {
                               setActiveId(employee.employee_id ?? employee.id ?? null)
                               setForm({
-                                full_name: employee.full_name ?? '',
+                                full_name: employee.full_name ?? employee.name ?? '',
                                 email: employee.email ?? '',
                                 phone: employee.phone ?? '',
                                 employment_status: (employee.employment_status as 'Active' | 'Terminated') ?? 'Active',
@@ -297,7 +301,7 @@ export function EmployeeRecordsPage() {
         <div className="users-card__header">
           <div>
             <h2>Employee Registry</h2>
-            <p>Records use the generic resource pattern and expose `employment_status` and `staff_category` for payroll processing.</p>
+            <p>View and manage employee information for payroll, staffing, and administrative reporting.</p>
           </div>
         </div>
 
@@ -403,7 +407,7 @@ export function EmployeeRecordsPage() {
         )}
       >
         <div className="form-grid">
-          <label className="form-field form-field--full"><span className="form-field__label">Full name</span><input value={viewingEmployee?.full_name ?? ''} readOnly /></label>
+          <label className="form-field form-field--full"><span className="form-field__label">Full name</span><input value={viewingEmployee?.full_name ?? viewingEmployee?.name ?? ''} readOnly /></label>
           <label className="form-field"><span className="form-field__label">Email</span><input value={viewingEmployee?.email ?? ''} readOnly /></label>
           <label className="form-field"><span className="form-field__label">Phone</span><input value={viewingEmployee?.phone ?? ''} readOnly /></label>
           <label className="form-field"><span className="form-field__label">Employment status</span>

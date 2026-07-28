@@ -108,6 +108,8 @@ export const PORTAL_NAV: Record<UserRole, PortalNavConfig> = {
         label: 'Reports',
         children: [
           { label: 'Financial Reports', path: '/accountant/reports/financial-reports', icon: 'FileBarChart' },
+          { label: 'Site Reports (review)', path: '/accountant/site-reports-review', icon: 'FileText' },
+          { label: 'Projects', path: '/accountant/projects', icon: 'Folder' },
         ],
       },
       {
