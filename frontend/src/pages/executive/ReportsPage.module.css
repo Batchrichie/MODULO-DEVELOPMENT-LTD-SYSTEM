@@ -1,0 +1,41 @@
+.reports__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.5rem;
+}
+
+.reports__card {
+  padding: 1.25rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-elevated);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.reports__indicator {
+  width: max-content;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  background: var(--brand-light);
+  color: var(--brand-primary);
+  font-weight: 700;
+  font-size: 0.875rem;
+}
+
+.reports__card-title {
+  margin: 0;
+  font-size: 1.125rem;
+}
+
+.reports__card-description {
+  margin: 0;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+}
+
+.reports__card-link {
+  margin-top: auto;
+  align-self: flex-start;
+}

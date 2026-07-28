@@ -1,22 +1,26 @@
-import { PendingBackendNotice } from '../../components/PendingBackendNotice'
+import { Link } from 'react-router-dom'
 import '../../styles/executive-dashboard.css'
 
 const REPORTS = [
   {
-    title: 'Income Statement (P&L)',
-    description: 'A view of revenue, expenses, and profit for the reporting period.',
+    title: 'Profit & Loss Statement',
+    description: 'Revenue, cost of sales, and operating profit for the reporting period.',
+    path: '/executive/reports/income-statement',
   },
   {
     title: 'Statement of Financial Position',
-    description: 'A view of assets, liabilities, and equity for a single date.',
+    description: 'Assets, liabilities, and equity snapshot for a single date.',
+    path: '/executive/reports/statement-of-financial-position',
   },
   {
     title: 'Cash Flow Statement',
-    description: 'A view of operating, investing, and financing cash flows.',
+    description: 'Operating, investing, and financing cash flows over time.',
+    path: '/executive/reports/cash-flow-statement',
   },
   {
     title: 'Statement of Changes in Equity',
-    description: 'A view of equity movements over the reporting period.',
+    description: 'Movements in share capital, retained earnings, and reserves.',
+    path: '/executive/reports/statement-of-changes-in-equity',
   },
 ]
 
@@ -25,8 +29,8 @@ export function ReportsPage() {
     <article className="exec-dash exec-screen">
       <header className="exec-screen__header">
         <p className="exec-dash__breadcrumb">Executive Dashboard</p>
-        <h1>Reports</h1>
-        <p>Landing page for the IFRS statement reports.</p>
+        <h1>Executive Reports</h1>
+        <p>Navigate executive financial statements with confidence.</p>
       </header>
 
       <section className="exec-screen__grid">
@@ -34,14 +38,9 @@ export function ReportsPage() {
           <article key={report.title} className="exec-screen__card">
             <h2>{report.title}</h2>
             <p>{report.description}</p>
-            <button type="button" className="button button--secondary" disabled>
+            <Link to={report.path} className="button button--secondary">
               View report
-            </button>
-            <PendingBackendNotice
-              inline
-              title="Detailed reports pending backend"
-              description="Detailed report views will be available in a future update."
-            />
+            </Link>
           </article>
         ))}
       </section>

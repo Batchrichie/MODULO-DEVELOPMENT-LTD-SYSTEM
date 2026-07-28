@@ -392,6 +392,20 @@ export async function reportCashFlow(
   })
 }
 
+export async function fetchChangesInEquity(
+  year?: number,
+): Promise<AccountantRpcResult<Record<string, unknown>[]>> {
+  return callRpc('report_changes_in_equity', {
+    ...(year !== undefined ? { p_year: year } : {}),
+  })
+}
+
+export async function reportChangesInEquity(
+  year?: number,
+): Promise<AccountantRpcResult<Record<string, unknown>[]>> {
+  return fetchChangesInEquity(year)
+}
+
 export async function fetchDashboardAccountantTasks(): Promise<AccountantRpcResult<DashboardTask[]>> {
   const result = await callRpc<any>('dashboard_accountant_tasks', {})
   if (!result.ok) return result

@@ -47,6 +47,10 @@ import { ProjectPortfolioPage } from './pages/executive/ProjectPortfolioPage'
 import { EquipmentRentalsPage } from './pages/executive/EquipmentRentalsPage'
 import { TaxCompliancePage } from './pages/executive/TaxCompliancePage'
 import { ReportsPage } from './pages/executive/ReportsPage'
+import { StatementOfChangesInEquityPage } from './pages/executive/StatementOfChangesInEquityPage'
+import { StatementOfFinancialPositionPage } from './pages/executive/StatementOfFinancialPositionPage'
+import { CashFlowStatementPage } from './pages/executive/CashFlowStatementPage'
+import { IncomeStatementPage } from './pages/executive/IncomeStatementPage'
 import { AlertsPage } from './pages/executive/AlertsPage'
 import { createPortalChildRoutes } from './routes/portalRoutes'
 
@@ -90,6 +94,10 @@ function App() {
           '/executive/equipment-rentals': <EquipmentRentalsPage />,
           '/executive/tax-compliance': <TaxCompliancePage />,
           '/executive/reports': <ReportsPage />,
+          '/executive/reports/income-statement': <IncomeStatementPage />,
+          '/executive/reports/statement-of-financial-position': <StatementOfFinancialPositionPage />,
+          '/executive/reports/cash-flow-statement': <CashFlowStatementPage />,
+          '/executive/reports/statement-of-changes-in-equity': <StatementOfChangesInEquityPage />,
           '/executive/alerts': <AlertsPage />,
         })}
       </Route>

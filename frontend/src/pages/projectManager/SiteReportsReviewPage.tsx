@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { EmptyState } from '../../components/EmptyState'
 import { FormErrorBanner } from '../../components/FormErrorBanner'
 import { PendingBackendNotice } from '../../components/PendingBackendNotice'
-import { fetchPendingSiteReports, type SiteReportRecord } from '../../lib/rpc/projectManager'
+import { fetchMySiteReports, type SiteReportRecord } from '../../lib/rpc/projectManager'
 import styles from './SiteReportsReviewPage.module.css'
 
 export function SiteReportsReviewPage() {
@@ -18,12 +18,12 @@ export function SiteReportsReviewPage() {
     setLoading(true)
     setError(null)
 
-    const result = await fetchPendingSiteReports()
+    const result = await fetchMySiteReports(1, 100)
     if (!result.ok) {
-      setError(result.error ?? 'Unable to load pending site reports')
+      setError(result.error ?? 'Unable to load submitted site reports')
       setReports([])
     } else if (!result.data?.success) {
-      setError(result.data.error ?? 'Pending site reports call returned unsuccessful status')
+      setError(result.data.error ?? 'Submitted site reports call returned unsuccessful status')
       setReports([])
     } else {
       setReports(result.data.data ?? [])
@@ -38,7 +38,7 @@ export function SiteReportsReviewPage() {
         <div>
           <p className={styles['sitereports__eyebrow']}>Project Manager</p>
           <h2 className={styles['sitereports__title']}>Site Reports</h2>
-          <p className={styles['sitereports__subtitle']}>Review and manage site inspection reports</p>
+          <p className={styles['sitereports__subtitle']}>View your submitted site inspection reports</p>
         </div>
       </header>
 
@@ -46,7 +46,14 @@ export function SiteReportsReviewPage() {
         {loading ? (
           <PendingBackendNotice />
         ) : error ? (
-          <FormErrorBanner message={error} />
+          error.includes('Could not find the function') ? (
+            <PendingBackendNotice
+              title="Pending backend"
+              description="Site reports functionality is not yet available from the backend."
+            />
+          ) : (
+            <FormErrorBanner message={error} />
+          )
         ) : !reports.length ? (
           <EmptyState title="No pending site reports" description="There are no pending site reports at this time." />
         ) : (
@@ -56,17 +63,17 @@ export function SiteReportsReviewPage() {
                 <tr>
                   <th>Project</th>
                   <th>Report Date</th>
-                  <th>Submitted By</th>
                   <th>Status</th>
+                  <th>Notes</th>
                 </tr>
               </thead>
               <tbody>
                 {reports.map((report) => (
-                  <tr key={`${report.project_id}-${report.report_date}-${report.submitted_by}`}>
+                  <tr key={`${report.report_id}-${report.project_id}-${report.report_date}`}>
                     <td>{report.project_name ?? String(report.project_id ?? '—')}</td>
                     <td>{report.report_date ?? '—'}</td>
-                    <td>{String(report.submitted_by ?? '—')}</td>
                     <td>{report.status ?? '—'}</td>
+                    <td>{report.notes ? `${report.notes.slice(0, 80)}${report.notes.length > 80 ? '…' : ''}` : '—'}</td>
                   </tr>
                 ))}
               </tbody>

@@ -141,20 +141,35 @@ export async function fetchProjectProfitability(projectId: string): Promise<PmRp
 }
 
 export interface SiteReportRecord {
-  project_id?: number
-  project_name?: string | null
-  report_date?: string | null
-  submitted_by?: number | null
-  status?: string | null
-  // TODO: expand after confirming return columns
+  report_id: number
+  project_id: number
+  project_name: string
+  submitted_by: number
+  report_date: string
+  notes: string | null
+  photo_url: string | null
+  status: 'pending_approval' | 'approved' | 'rejected'
+  approved_by: number | null
+  created_at: string
+  rejection_reason: string | null
 }
 
-export async function fetchPendingSiteReports(): Promise<{ ok: true; data: { success: boolean; data: SiteReportRecord[]; error: string | null }; raw: unknown } | { ok: false; error: string; code?: string }> {
-  const { data, error } = await supabase.rpc('list_pending_site_reports')
+export async function fetchMySiteReports(
+  page: number = 1,
+  limit: number = 25,
+): Promise<
+  | { ok: true; data: { success: boolean; data: SiteReportRecord[]; error: string | null; meta?: { total: number; page: number; limit: number } }; raw: unknown }
+  | { ok: false; error: string; code?: string }
+> {
+  const { data, error } = await supabase.rpc('list_my_site_reports', { p_page: page, p_limit: limit })
 
   if (error) {
     return { ok: false, error: error.message, code: error.code }
   }
 
-  return { ok: true, data: data as { success: boolean; data: SiteReportRecord[]; error: string | null }, raw: data }
+  return {
+    ok: true,
+    data: data as { success: boolean; data: SiteReportRecord[]; error: string | null; meta?: { total: number; page: number; limit: number } },
+    raw: data,
+  }
 }

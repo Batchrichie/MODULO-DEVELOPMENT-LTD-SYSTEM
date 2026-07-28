@@ -1,0 +1,38 @@
+.sofp__toolbar {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.sofp__table-wrapper {
+  overflow-x: auto;
+}
+
+.sofp__table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.sofp__table th,
+.sofp__table td {
+  border: 1px solid var(--color-border);
+  padding: 0.75rem 0.9rem;
+  text-align: left;
+}
+
+.sofp__section-header {
+  background: var(--color-bg-muted);
+  font-weight: 700;
+}
+
+.sofp__total-row {
+  background: var(--color-bg-elevated);
+  font-weight: 700;
+}
+
+.sofp__note {
+  margin-top: 1.25rem;
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+}
