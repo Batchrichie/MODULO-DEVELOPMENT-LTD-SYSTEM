@@ -1,4 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
+import { SpeedInsights } from '@vercel/speed-insights/react'
 import { RouteGuard } from './components/RouteGuard'
 import { useAuth } from './context/AuthContext'
 import { PORTAL_NAV } from './config/navigation'
@@ -58,103 +59,106 @@ function RootRedirect() {
 
 function App() {
   return (
-    <Routes>
-      <Route path="/" element={<RootRedirect />} />
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+    <>
+      <Routes>
+        <Route path="/" element={<RootRedirect />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
-      <Route
-        path="/executive/*"
-        element={
-          <RouteGuard allowedRoles={['CEO']}>
-            <PortalLayout role="CEO" />
-          </RouteGuard>
-        }
-      >
-        {createPortalChildRoutes(PORTAL_NAV.CEO, {
-          '/executive/dashboard': <ExecutiveDashboardPage />,
-        })}
-      </Route>
+        <Route
+          path="/executive/*"
+          element={
+            <RouteGuard allowedRoles={['CEO']}>
+              <PortalLayout role="CEO" />
+            </RouteGuard>
+          }
+        >
+          {createPortalChildRoutes(PORTAL_NAV.CEO, {
+            '/executive/dashboard': <ExecutiveDashboardPage />,
+          })}
+        </Route>
 
-      <Route
-        path="/accountant/*"
-        element={
-          <RouteGuard allowedRoles={['Accountant']}>
-            <PortalLayout role="Accountant" />
-          </RouteGuard>
-        }
-      >
-        {createPortalChildRoutes(PORTAL_NAV.Accountant, {
-          '/accountant/dashboard': <AccountantDashboardPage />,
-          '/accountant/chart-of-accounts': <AccountantCoaPage />,
-          '/accountant/journal-entries': <AccountantJournalEntriesPage />,
-          '/accountant/general-ledger': <AccountantGeneralLedgerPage />,
-          '/accountant/trial-balance': <AccountantTrialBalancePage />,
-          '/accountant/invoicing-expenses/invoicing': <InvoicingPage />,
-          '/accountant/invoicing-expenses/customer-payments': <CustomerPaymentsPage />,
-          '/accountant/invoicing-expenses/expenses': <ExpensesPage />,
-          '/accountant/invoicing-expenses/supplier-payments': <SupplierPaymentsPage />,
-          '/accountant/payroll-hr/employee-records': <EmployeeRecordsPage />,
-          '/accountant/payroll-hr/payroll': <PayrollPage />,
-          '/accountant/asset-management/asset-register': <AssetRegisterPage />,
-          '/accountant/asset-management/ppe-schedule': <PpeSchedulePage />,
-          '/accountant/asset-management/depreciation-journal': <DepreciationJournalPage />,
-          '/accountant/asset-management/rentals': <RentalsPage />,
-          '/accountant/site-reports-review': <SiteReportsReviewPage />,
-          '/accountant/projects': <AccountantProjectsPage />,
-          '/accountant/compliance-tax/tax': <TaxPage />,
-          '/accountant/budgeting/budget-vs-actual': <AccountantBudgetVsActualPage />,
-        })}
-      </Route>
+        <Route
+          path="/accountant/*"
+          element={
+            <RouteGuard allowedRoles={['Accountant']}>
+              <PortalLayout role="Accountant" />
+            </RouteGuard>
+          }
+        >
+          {createPortalChildRoutes(PORTAL_NAV.Accountant, {
+            '/accountant/dashboard': <AccountantDashboardPage />,
+            '/accountant/chart-of-accounts': <AccountantCoaPage />,
+            '/accountant/journal-entries': <AccountantJournalEntriesPage />,
+            '/accountant/general-ledger': <AccountantGeneralLedgerPage />,
+            '/accountant/trial-balance': <AccountantTrialBalancePage />,
+            '/accountant/invoicing-expenses/invoicing': <InvoicingPage />,
+            '/accountant/invoicing-expenses/customer-payments': <CustomerPaymentsPage />,
+            '/accountant/invoicing-expenses/expenses': <ExpensesPage />,
+            '/accountant/invoicing-expenses/supplier-payments': <SupplierPaymentsPage />,
+            '/accountant/payroll-hr/employee-records': <EmployeeRecordsPage />,
+            '/accountant/payroll-hr/payroll': <PayrollPage />,
+            '/accountant/asset-management/asset-register': <AssetRegisterPage />,
+            '/accountant/asset-management/ppe-schedule': <PpeSchedulePage />,
+            '/accountant/asset-management/depreciation-journal': <DepreciationJournalPage />,
+            '/accountant/asset-management/rentals': <RentalsPage />,
+            '/accountant/site-reports-review': <SiteReportsReviewPage />,
+            '/accountant/projects': <AccountantProjectsPage />,
+            '/accountant/compliance-tax/tax': <TaxPage />,
+            '/accountant/budgeting/budget-vs-actual': <AccountantBudgetVsActualPage />,
+          })}
+        </Route>
 
-      <Route
-        path="/project-manager/*"
-        element={
-          <RouteGuard allowedRoles={['ProjectManager']}>
-            <PortalLayout role="ProjectManager" />
-          </RouteGuard>
-        }
-      >
-        {createPortalChildRoutes(PORTAL_NAV.ProjectManager, {
-          '/project-manager/my-projects': <MyProjectsPage />,
-          '/project-manager/project-costing': <ProjectCostingPage />,
-          '/project-manager/completion-assessments': <CompletionAssessmentsPage />,
-          '/project-manager/budget-tracking': <BudgetTrackingPage />,
-          '/project-manager/site-reports': <SiteReportsPage />,
-        })}
-      </Route>
+        <Route
+          path="/project-manager/*"
+          element={
+            <RouteGuard allowedRoles={['ProjectManager']}>
+              <PortalLayout role="ProjectManager" />
+            </RouteGuard>
+          }
+        >
+          {createPortalChildRoutes(PORTAL_NAV.ProjectManager, {
+            '/project-manager/my-projects': <MyProjectsPage />,
+            '/project-manager/project-costing': <ProjectCostingPage />,
+            '/project-manager/completion-assessments': <CompletionAssessmentsPage />,
+            '/project-manager/budget-tracking': <BudgetTrackingPage />,
+            '/project-manager/site-reports': <SiteReportsPage />,
+          })}
+        </Route>
 
-      <Route
-        path="/employee/*"
-        element={
-          <RouteGuard allowedRoles={['Employee']}>
-            <PortalLayout role="Employee" />
-          </RouteGuard>
-        }
-      >
-        {createPortalChildRoutes(PORTAL_NAV.Employee, {
-          '/employee/payslips': <PayslipsPage />,
-        })}
-      </Route>
+        <Route
+          path="/employee/*"
+          element={
+            <RouteGuard allowedRoles={['Employee']}>
+              <PortalLayout role="Employee" />
+            </RouteGuard>
+          }
+        >
+          {createPortalChildRoutes(PORTAL_NAV.Employee, {
+            '/employee/payslips': <PayslipsPage />,
+          })}
+        </Route>
 
-      <Route
-        path="/admin/*"
-        element={
-          <RouteGuard allowedRoles={['Admin']}>
-            <PortalLayout role="Admin" />
-          </RouteGuard>
-        }
-      >
-        {createPortalChildRoutes(PORTAL_NAV.Admin, {
-          '/admin/user-management': <UserManagementPage />,
-          '/admin/roles-permissions': <RolesPermissionsPage />,
-          '/admin/audit-log': <AuditLogPage />,
-          '/admin/security-monitoring': <SecurityMonitoringPage />,
-        })}
-      </Route>
+        <Route
+          path="/admin/*"
+          element={
+            <RouteGuard allowedRoles={['Admin']}>
+              <PortalLayout role="Admin" />
+            </RouteGuard>
+          }
+        >
+          {createPortalChildRoutes(PORTAL_NAV.Admin, {
+            '/admin/user-management': <UserManagementPage />,
+            '/admin/roles-permissions': <RolesPermissionsPage />,
+            '/admin/audit-log': <AuditLogPage />,
+            '/admin/security-monitoring': <SecurityMonitoringPage />,
+          })}
+        </Route>
 
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+      <SpeedInsights />
+    </>
   )
 }
 
