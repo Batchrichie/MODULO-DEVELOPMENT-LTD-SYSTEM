@@ -78,7 +78,7 @@ export function PayslipsPage() {
   }
 
   async function loadEmployee() {
-    const profileResult = await fetchMyProfile()
+    const profileResult = await fetchMyProfile(appUser?.email)
     if (profileResult.ok) {
       setEmployee(profileResult.data)
       return

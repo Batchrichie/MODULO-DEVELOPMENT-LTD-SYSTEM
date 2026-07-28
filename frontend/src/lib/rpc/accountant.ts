@@ -446,36 +446,13 @@ export async function fetchMyPayslips(
   page = 1,
   limit = 25,
 ): Promise<AccountantRpcResult<PayslipRecord[]>> {
-  const result = await callRpc<any>('list_my_payslips', {
-    p_page: page,
-    p_limit: limit,
-  })
-
-  if (!result.ok) return result
-
-  const rows = Array.isArray(result.data)
-    ? result.data
-    : Array.isArray((result.data as any)?.rows)
-    ? (result.data as any).rows
-    : []
-
-  return { ok: true, data: rows as PayslipRecord[], raw: result.raw }
+  return getRecords<PayslipRecord[]>('payslips', page, limit)
 }
 
-export async function fetchMyProfile(): Promise<AccountantRpcResult<MyEmployeeRecord>> {
-  const result = await getRecords<MyEmployeeRecord[]>('employees', 1, 100)
-  if (!result.ok) return result
-
-  const rows = result.data ?? []
-  if (!rows.length) {
-    return {
-      ok: false,
-      error: 'Employee profile not found',
-      code: 'NOT_FOUND',
-    }
-  }
-
-  return { ok: true, data: rows[0], raw: result.raw }
+export async function fetchMyProfile(
+  email?: string,
+): Promise<AccountantRpcResult<MyEmployeeRecord>> {
+  return fetchMyEmployeeRecord(email)
 }
 
 export async function taxRatesUpdate(taxType: string, rate: number): Promise<AccountantRpcResult<{ success: boolean }>> {
