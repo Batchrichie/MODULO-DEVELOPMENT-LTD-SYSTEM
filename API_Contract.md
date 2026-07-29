@@ -33,7 +33,8 @@ On failure:
 - **Dates:** ISO 8601 (`YYYY-MM-DD`)
 - **Money:** always minor-unit-free decimal (e.g., `1234.50`), currency implied as GHS unless stated
 
-*(Note: the live database has since added multi-currency columns — `currency_code`, `exchange_rate`, `functional_amount` — on invoices, expenses, and payments, per `CAREMS_Live_Schema_Reconstructed.sql`. This contract still describes the original GHS-only shape and has not been reconciled to that drift. Out of scope for v1.1; flagged for a future version.)*
+- **Currency:** GHS is the functional and presentation currency. **Confirmed in-scope (Master Plan v2.1, Decision #11):** the company occasionally raises **invoices** in foreign currency, holds a real USD bank account, and **customer payments sometimes settle in USD**. `POST /invoices` and `POST /payments/received` both accept `currency_code` and `exchange_rate` at input; if omitted, GHS at 1.0 is assumed. Reporting endpoints (Trial Balance, SOFP, P&L, Cash Flow) return GHS-denominated figures using `functional_amount` regardless of transaction currency. Foreign-currency revaluation (IAS 21) is out of scope for Phase One — exchange rates are treated as static at transaction date; no revaluation journal entries are posted.
+  **Not yet confirmed:** the live schema also carries `currency_code`/`exchange_rate`/`functional_amount` on `expenses` and `supplier_payments`. Client confirmation covered invoicing and customer payment settlement only. Per the scope-gate rule (Master Plan v2.1, Section 8), treat those two tables' currency columns as unscoped drift, not confirmed contract, until the Instructor separately confirms whether the company also receives foreign-currency supplier invoices or pays suppliers in USD.
 
 ---
 
@@ -49,8 +50,8 @@ On failure:
 |---|---|---|
 | Project Completion Assessment | `POST /projects/:id/completion-assessments` (submit), `PATCH .../:id/approve` (approve) | Contract Assets/WIP, Revenue |
 | Customer Invoice | `POST /invoices` | AR, Contract Assets/WIP (drawdown) and/or Client Advances (excess billing), VAT/NHIL/GETFund Output |
-| Customer Payment (against invoice) | `POST /payments/received` | Bank, AR |
-| Customer Payment (advance, no invoice) | `POST /payments/received` (omit `invoice_id`) | Bank, Client Advances/Unearned Revenue |
+| Customer Payment (against invoice) | `POST /payments/received` — accepts `currency_code`/`exchange_rate`, confirmed in-scope (Decision #11) | Bank, AR |
+| Customer Payment (advance, no invoice) | `POST /payments/received` (omit `invoice_id`) — same currency support applies | Bank, Client Advances/Unearned Revenue |
 | Supplier Invoice | `POST /expenses` | Expense/Asset, VAT Input, AP |
 | Supplier Payment | `POST /payments/made` | AP, Bank |
 | **Rental Invoice** | `POST /rentals/:id/invoice` — **no backing implementation yet; known gap.** **IFRS 16 requirement (v1.1):** the company is lessor-only under short-term operating leases (Master Plan v2.1, Decision #8). When this endpoint is built, rental revenue **must accrue straight-line over the rental period**, not post in full at invoice date, even if invoicing itself happens on a milestone or periodic schedule. The rental asset stays capitalized under `1250` and continues depreciating per IAS 16 regardless of invoicing timing. | AR, Rental Revenue (accrued over term), Tax Output — sets `rental_contract_id` on the created invoice so it's traceable back to the contract, distinct from project milestone invoices |
@@ -77,8 +78,9 @@ On failure:
 | Budget vs Actual | `GET /reports/projects/:id/budget-vs-actual` |
 | Customer/Supplier Ageing | `GET /reports/ageing?type=customer` |
 | Tax Schedules | `GET /reports/tax?type=vat&period=2026-07` |
-| Executive Dashboard bundle | `GET /dashboard/executive` |
+| Executive Dashboard bundle | `GET /dashboard/executive` — **does not include** project-profitability-trend or rental-revenue-trend series data; those chart panels have no backing endpoint and are formally deferred to Phase Two (Master Plan v2.1, Decision #10) |
 | Accountant Task Centre | `GET /dashboard/accountant-tasks` |
+| Company Profile | **No endpoint exists.** `settings/company-profile` (name, phone, locations) is formally deferred to Phase Two (Master Plan v2.1, Decision #10). Frontend must use a placeholder object, never a hardcoded value, and label the Settings screen pending-backend per `CAREMS_Frontend_Engineering_Standard.md` Section 5. |
 
 ---
 
