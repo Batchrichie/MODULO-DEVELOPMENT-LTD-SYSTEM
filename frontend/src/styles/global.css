@@ -61,6 +61,21 @@ button {
   background: var(--color-bg-muted);
 }
 
+.theme-toggle--icon {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border-radius: 10px;
+  justify-content: center;
+  align-items: center;
+}
+
+.theme-toggle--icon svg {
+  width: 20px;
+  height: 20px;
+}
+
 .theme-toggle:focus-visible,
 .logout-button:focus-visible {
   outline: 2px solid var(--color-focus-ring);

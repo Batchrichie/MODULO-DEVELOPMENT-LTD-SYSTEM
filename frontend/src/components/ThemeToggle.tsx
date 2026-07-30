@@ -1,16 +1,19 @@
+import { Moon, SunMedium } from 'lucide-react'
 import { useTheme } from '../context/ThemeContext'
 
 export function ThemeToggle() {
   const { theme, toggleTheme } = useTheme()
+  const isLight = theme === 'light'
 
   return (
     <button
       type="button"
-      className="theme-toggle"
+      className="theme-toggle theme-toggle--icon"
       onClick={toggleTheme}
-      aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+      aria-label={`Switch to ${isLight ? 'dark' : 'light'} mode`}
+      title={`Switch to ${isLight ? 'dark' : 'light'} mode`}
     >
-      {theme === 'light' ? 'Dark mode' : 'Light mode'}
+      {isLight ? <Moon size={18} /> : <SunMedium size={18} />}
     </button>
   )
 }

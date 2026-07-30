@@ -1,7 +1,6 @@
 import { NavLink } from 'react-router-dom'
 import type { NavEntry, PortalNavConfig } from '../config/navigation'
 import { UserMenu } from './UserMenu'
-import { companyProfile } from '../config/companyProfile'
 import {
   LayoutDashboard,
   LineChart,
@@ -196,11 +195,7 @@ export function Sidebar({ config, collapsed, drawerOpen, onCloseDrawer }: Sideba
         aria-label={`${config.portalLabel} navigation`}
       >
         <div className="sidebar__inner">
-          <div className="sidebar__brand">
-            <span className="sidebar__brand-mark">{companyProfile.name?.charAt(0).toUpperCase() ?? 'C'}</span>
-            {!collapsed && <span><strong>{companyProfile.name}</strong><small>{config.portalLabel}</small></span>}
-          </div>
-          {!collapsed && <label className="sidebar__search"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m20 20-4.2-4.2m1.2-5.3a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0Z" /></svg><input placeholder="Search" aria-label="Search navigation" /><kbd>⌘ K</kbd></label>}
+          {!collapsed && <label className="sidebar__search sidebar__search--top"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m20 20-4.2-4.2m1.2-5.3a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0Z" /></svg><input placeholder="Search" aria-label="Search navigation" /><kbd>⌘ K</kbd></label>}
           {config.entries.map((entry) => renderEntry(entry, collapsed, onCloseDrawer))}
           <UserMenu />
         </div>

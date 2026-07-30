@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import type { PortalNavConfig } from '../config/navigation'
-import { getNavLabelForPath } from '../config/navigation'
 import type { UserRole } from '../types/auth'
+import { companyProfile } from '../config/companyProfile'
 import { BottomNav } from './BottomNav'
 import { Sidebar } from './Sidebar'
+import { ThemeToggle } from './ThemeToggle'
 import '../styles/portal-shell.css'
 
 interface PortalShellProps {
@@ -41,9 +42,8 @@ export function PortalShell({ role, navConfig }: PortalShellProps) {
   const viewport = useViewportMode()
   const [drawerOpen, setDrawerOpen] = useState(false)
 
-  const collapsed = viewport === 'tablet'
+  const collapsed = false
   const isPhone = viewport === 'phone'
-  const pageTitle = getNavLabelForPath(role, location.pathname)
 
   useEffect(() => {
     setDrawerOpen(false)
@@ -64,12 +64,14 @@ export function PortalShell({ role, navConfig }: PortalShellProps) {
               ☰
             </button>
           )}
-        </div>
-        <div className="portal-shell__breadcrumb" aria-live="polite">
-          <span>Platform</span><b>/</b><strong>{pageTitle}</strong>
+          <div>
+            <strong>{companyProfile.name}</strong>
+            <small>{navConfig.portalLabel}</small>
+          </div>
         </div>
         <div className="portal-shell__actions">
           <button type="button" className="portal-shell__icon-btn" aria-label="Notifications"><svg viewBox="0 0 24 24"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" /></svg><i /></button>
+          <ThemeToggle />
           <button type="button" className="portal-shell__icon-btn" aria-label="Settings"><svg viewBox="0 0 24 24"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm8-3.5-2.1-.8a6.4 6.4 0 0 0-.5-1.3l.9-2-1.9-1.9-2 .9a6.4 6.4 0 0 0-1.3-.5L12.3 4H9.7l-.8 2.1a6.4 6.4 0 0 0-1.3.5l-2-.9-1.9 1.9.9 2a6.4 6.4 0 0 0-.5 1.3L2 12v2l2.1.8c.1.5.3.9.5 1.3l-.9 2 1.9 1.9 2-.9c.4.2.9.4 1.3.5l.8 2.1h2.6l.8-2.1a6.4 6.4 0 0 0 1.3-.5l2 .9 1.9-1.9-.9-2c.2-.4.4-.9.5-1.3L20 14v-2Z" /></svg></button>
         </div>
       </header>
