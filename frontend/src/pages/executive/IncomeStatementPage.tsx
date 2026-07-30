@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { EmptyState } from '../../components/EmptyState'
+import { formatMoneyGhs } from '../../lib/formatMoney'
 import { FormErrorBanner } from '../../components/FormErrorBanner'
 import { PendingBackendNotice } from '../../components/PendingBackendNotice'
 import { reportIncomeStatement } from '../../lib/rpc/accountant'

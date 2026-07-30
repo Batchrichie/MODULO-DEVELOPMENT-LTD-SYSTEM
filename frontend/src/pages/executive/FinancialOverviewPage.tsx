@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { formatMoneyGhs } from '../../lib/formatMoney'
-import { EmptyState } from '../../components/EmptyState'
 import { FormErrorBanner } from '../../components/FormErrorBanner'
 import {
   reportCashFlow,
@@ -41,11 +40,6 @@ type FinancialOverviewData = {
   incomeStatement: IncomeStatementReport
   sofp: SofpReport
   cashFlow: CashFlowReport
-}
-
-function formatDate(value: string): string {
-  if (!value) return '—'
-  return new Date(value).toLocaleDateString('en-GB')
 }
 
 function isEmptyReport(data: FinancialOverviewData): boolean {

@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
 import { formatMoneyGhs } from '../../lib/formatMoney'
-import { EmptyState } from '../../components/EmptyState'
 import { FormErrorBanner } from '../../components/FormErrorBanner'
 import { PendingBackendNotice } from '../../components/PendingBackendNotice'
 import {

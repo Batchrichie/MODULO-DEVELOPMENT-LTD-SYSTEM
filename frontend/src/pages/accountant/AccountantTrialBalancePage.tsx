@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { EmptyState } from '../../components/EmptyState'
 import { formatMoneyGhs } from '../../lib/formatMoney'
 import { fetchTrialBalance, type TrialBalanceRow } from '../../lib/rpc/accountant'
 import '../../styles/executive-dashboard.css'

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { formatMoneyGhs } from '../../lib/formatMoney'
 import { reportTax } from '../../lib/rpc/accountant'
 import { EmptyState } from '../../components/EmptyState'
@@ -44,20 +44,25 @@ export function TaxCompliancePage() {
 
       if (!active) return
 
-      const errors = results.filter((item) => !item.result.ok)
-      if (errors.length > 0) {
-        const first = errors[0]
-        setState({ status: 'error', message: `${first.tax.label} report failed: ${first.result.error}` })
+      const firstError = results.find((item): item is { tax: (typeof TAX_TYPES)[number]; result: { ok: false; error: string; code?: string } } => !item.result.ok)
+      if (firstError) {
+        setState({ status: 'error', message: `${firstError.tax.label} report failed: ${firstError.result.error}` })
         return
       }
 
-      const records = results.map(({ tax, result }) => ({
-        type: tax.label,
-        opening_balance: (result.data as any)?.opening_balance ?? null,
-        accrued_this_period: (result.data as any)?.accrued_this_period ?? null,
-        paid_this_period: (result.data as any)?.paid_this_period ?? null,
-        closing_balance: (result.data as any)?.closing_balance ?? null,
-      })) as TaxStatus[]
+      const records: TaxStatus[] = []
+      for (const { tax, result } of results) {
+        if (!result.ok) continue
+
+        const payload = result.data as Record<string, unknown> | undefined
+        records.push({
+          type: tax.label,
+          opening_balance: typeof payload?.opening_balance === 'number' ? payload.opening_balance : null,
+          accrued_this_period: typeof payload?.accrued_this_period === 'number' ? payload.accrued_this_period : null,
+          paid_this_period: typeof payload?.paid_this_period === 'number' ? payload.paid_this_period : null,
+          closing_balance: typeof payload?.closing_balance === 'number' ? payload.closing_balance : null,
+        })
+      }
 
       const isEmpty = records.every((record) => !record.closing_balance && !record.opening_balance && !record.accrued_this_period && !record.paid_this_period)
       if (isEmpty) {

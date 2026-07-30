@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { EmptyState } from '../../components/EmptyState'
 import { Modal } from '../../components/Modal'
 import { formatMoneyGhs } from '../../lib/formatMoney'
 import { createRecord, fetchAccounts, getRecords } from '../../lib/rpc/accountant'

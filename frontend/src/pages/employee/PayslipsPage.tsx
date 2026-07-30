@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext'
 import { companyProfile } from '../../config/companyProfile'
 import { formatMoneyGhs } from '../../lib/formatMoney'
 import { deriveStatusBadgeFromState, StatusBadge } from '../../components/StatusBadge'
-import { fetchMyPayslips, fetchMyProfile, fetchMyEmployeeRecord, type MyEmployeeRecord, type PayslipRecord } from '../../lib/rpc/accountant'
+import { fetchMyPayslips, fetchMyProfile, type MyEmployeeRecord, type PayslipRecord } from '../../lib/rpc/accountant'
 import '../../styles/executive-dashboard.css'
 import '../../styles/payslip.css'
 

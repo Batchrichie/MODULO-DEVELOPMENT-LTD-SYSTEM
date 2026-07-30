@@ -5,6 +5,10 @@ import { EmptyState } from '../../components/EmptyState'
 import { FormErrorBanner } from '../../components/FormErrorBanner'
 import '../../styles/executive-dashboard.css'
 
+function formatCount(value: number): string {
+  return value.toLocaleString('en-US')
+}
+
 type LoadState =
   | { status: 'loading' }
   | { status: 'error'; message: string }
@@ -109,7 +113,6 @@ export function EquipmentRentalsPage() {
   }
 
   const contracts = state.contracts
-  const hasEquipmentInfo = contracts.some((contract) => contract['equipment_name'] || contract['description'])
 
   return (
     <article className="exec-dash exec-screen">
@@ -148,14 +151,20 @@ export function EquipmentRentalsPage() {
               <tr key={contract.contract_id ?? contract.id ?? contract.equipment_id ?? Math.random()}>
                 <td>{contract.contract_id ?? contract.id ?? 'Unknown'}</td>
                 <td>
-                  {contract['equipment_name'] ?? contract.equipment_id ?? 'Unknown'}
-                  {contract['description'] ? <div className="exec-screen__note">{contract['description']}</div> : null}
+                  {typeof contract['equipment_name'] === 'string' && contract['equipment_name']
+                    ? contract['equipment_name']
+                    : typeof contract.equipment_id === 'string' && contract.equipment_id
+                      ? contract.equipment_id
+                      : 'Unknown'}
+                  {typeof contract['description'] === 'string' && contract['description'] ? (
+                    <div className="exec-screen__note">{contract['description']}</div>
+                  ) : null}
                 </td>
                 <td>{contract.customer_id ?? 'Unknown'}</td>
                 <td>{contract.start_date ?? 'Unknown'}</td>
                 <td>{contract.end_date ?? 'Unknown'}</td>
                 <td className="data-table__num">{formatMoneyGhs(contract.rate)}</td>
-                <td>{contract.status ?? 'Unknown'}</td>
+                <td>{typeof contract.status === 'string' && contract.status ? contract.status : 'Unknown'}</td>
               </tr>
             ))}
           </tbody>
