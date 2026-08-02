@@ -269,6 +269,7 @@ export type AccountantRpcResult<T> =
 export async function getRecords<T>(resource: string, page: number, limit: number): Promise<AccountantRpcResult<T>> {
   const result = await callRpc<T>('get_records', {
     p_resource: resource,
+    p_id: null,
     p_page: page,
     p_limit: limit,
   })

@@ -71,6 +71,14 @@ export const PORTAL_NAV: Record<UserRole, PortalNavConfig> = {
       },
       {
         type: 'section',
+        label: 'Contacts',
+        children: [
+          { label: 'Customer Records', path: '/accountant/contacts/customers', icon: 'Users' },
+          { label: 'Supplier Records', path: '/accountant/contacts/suppliers', icon: 'Building2' },
+        ],
+      },
+      {
+        type: 'section',
         label: 'Banking & Cash',
         children: [
           { label: 'Bank Accounts', path: '/accountant/banking-cash/bank-accounts', icon: 'Building2' },
