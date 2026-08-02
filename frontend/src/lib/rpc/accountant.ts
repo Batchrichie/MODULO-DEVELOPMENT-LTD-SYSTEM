@@ -489,6 +489,12 @@ export async function paymentMadeCreate(payload: Record<string, unknown>): Promi
   })
 }
 
+export async function pettyCashDisbursementCreate(payload: Record<string, unknown>): Promise<AccountantRpcResult<Record<string, unknown>>> {
+  return callRpc<Record<string, unknown>>('petty_cash_disbursement_create', {
+    p_payload: payload,
+  })
+}
+
 export async function fetchTaxRates(): Promise<AccountantRpcResult<TaxRateSetting[]>> {
   const result = await callRpc<any>('tax_rates_get', {})
 

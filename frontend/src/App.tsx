@@ -17,6 +17,7 @@ import { InvoicingPage } from './pages/accountant/InvoicingPage'
 import { CustomerPaymentsPage } from './pages/accountant/CustomerPaymentsPage'
 import { ExpensesPage } from './pages/accountant/ExpensesPage'
 import { SupplierPaymentsPage } from './pages/accountant/SupplierPaymentsPage'
+import { PettyCashPage } from './pages/accountant/PettyCashPage'
 import { EmployeeRecordsPage } from './pages/accountant/EmployeeRecordsPage'
 import { PayrollPage } from './pages/accountant/PayrollPage'
 import { AssetRegisterPage } from './pages/accountant/AssetRegisterPage'
@@ -120,6 +121,7 @@ function App() {
           '/accountant/invoicing-expenses/customer-payments': <CustomerPaymentsPage />,
           '/accountant/invoicing-expenses/expenses': <ExpensesPage />,
           '/accountant/invoicing-expenses/supplier-payments': <SupplierPaymentsPage />,
+          '/accountant/banking-cash/petty-cash': <PettyCashPage />,
           '/accountant/payroll-hr/employee-records': <EmployeeRecordsPage />,
           '/accountant/payroll-hr/payroll': <PayrollPage />,
           '/accountant/asset-management/asset-register': <AssetRegisterPage />,
