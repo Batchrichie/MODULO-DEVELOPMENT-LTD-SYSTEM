@@ -392,6 +392,29 @@ export async function reportCashFlow(
   })
 }
 
+export async function reportAgeing(
+  type: 'customer' | 'supplier',
+  page: number,
+  limit: number,
+): Promise<AccountantRpcResult<Record<string, unknown>[]>> {
+  const result = await callRpc<any>('report_ageing', {
+    p_type: type,
+    p_page: page,
+    p_limit: limit,
+  })
+
+  if (!result.ok) return result
+
+  const payload = result.data as any
+  const rows = Array.isArray(payload)
+    ? payload
+    : Array.isArray(payload?.rows)
+    ? payload.rows
+    : []
+
+  return { ok: true, data: rows as Record<string, unknown>[], raw: result.raw }
+}
+
 export async function fetchChangesInEquity(
   year?: number,
 ): Promise<AccountantRpcResult<Record<string, unknown>[]>> {

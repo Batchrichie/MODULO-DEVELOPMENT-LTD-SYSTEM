@@ -1,0 +1,1788 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CAREMS — Accountant Dashboard | Modulo Development Ltd</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<style>
+/* ===== RESET & BASE ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --brand-primary: #0d9488;
+  --brand-primary-hover: #0f766e;
+  --brand-light: #ccfbf1;
+  --brand-ghost: rgba(13,148,136,0.08);
+  --bg: #f0f2f5;
+  --bg-elevated: #ffffff;
+  --bg-muted: #f8f9fa;
+  --text: #1a1a2e;
+  --text-muted: #6b7280;
+  --text-light: #9ca3af;
+  --border: #e5e7eb;
+  --border-light: #f3f4f6;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.06);
+  --shadow-lg: 0 8px 30px rgba(0,0,0,0.08);
+  --shadow-xl: 0 20px 60px rgba(0,0,0,0.1);
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --green: #059669;
+  --green-bg: #ecfdf5;
+  --green-border: #a7f3d0;
+  --red: #dc2626;
+  --red-bg: #fef2f2;
+  --red-border: #fecaca;
+  --amber: #d97706;
+  --amber-bg: #fffbeb;
+  --amber-border: #fde68a;
+  --blue: #2563eb;
+  --blue-bg: #eff6ff;
+  --blue-border: #bfdbfe;
+  --purple: #7c3aed;
+  --purple-bg: #f5f3ff;
+  --purple-border: #ddd6fe;
+  --cyan: #0891b2;
+  --cyan-bg: #ecfeff;
+  --rose: #e11d48;
+  --rose-bg: #fff1f2;
+  --sidebar-w: 260px;
+}
+
+html { font-size: 14px; }
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  min-height: 100vh;
+  display: flex;
+}
+
+/* ===== SIDEBAR ===== */
+.sidebar {
+  width: var(--sidebar-w);
+  background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+  color: #fff;
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  transition: transform 0.3s ease;
+}
+.sidebar-brand {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.sidebar-brand .logo {
+  width: 36px; height: 36px;
+  background: var(--brand-primary);
+  border-radius: var(--radius-sm);
+  display: grid; place-items: center;
+  font-weight: 800; font-size: 0.85rem;
+  letter-spacing: -0.5px;
+}
+.sidebar-brand h1 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.sidebar-brand small {
+  font-size: 0.65rem;
+  color: rgba(255,255,255,0.5);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.sidebar-section-label {
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: rgba(255,255,255,0.35);
+  padding: 1.25rem 1.5rem 0.4rem;
+}
+.sidebar-nav { flex: 1; padding: 0.5rem 0; }
+.sidebar-nav a {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.55rem 1.5rem;
+  color: rgba(255,255,255,0.65);
+  text-decoration: none;
+  font-size: 0.8rem;
+  font-weight: 500;
+  transition: all 0.15s ease;
+  border-left: 3px solid transparent;
+}
+.sidebar-nav a:hover {
+  color: #fff;
+  background: rgba(255,255,255,0.06);
+}
+.sidebar-nav a.active {
+  color: #fff;
+  background: rgba(13,148,136,0.15);
+  border-left-color: var(--brand-primary);
+}
+.sidebar-nav a .nav-icon {
+  width: 18px; height: 18px;
+  opacity: 0.7;
+}
+.sidebar-nav a.active .nav-icon { opacity: 1; }
+.sidebar-nav a .badge {
+  margin-left: auto;
+  background: var(--red);
+  color: #fff;
+  font-size: 0.6rem;
+  font-weight: 700;
+  padding: 0.1rem 0.45rem;
+  border-radius: 99px;
+}
+.sidebar-user {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  font-size: 0.78rem;
+}
+.sidebar-user .avatar {
+  width: 32px; height: 32px;
+  background: var(--brand-primary);
+  border-radius: 50%;
+  display: grid; place-items: center;
+  font-weight: 700; font-size: 0.7rem;
+}
+.sidebar-user .name { font-weight: 600; }
+.sidebar-user .role { font-size: 0.65rem; color: rgba(255,255,255,0.45); }
+
+/* ===== MAIN ===== */
+.main {
+  flex: 1;
+  margin-left: var(--sidebar-w);
+  min-height: 100vh;
+}
+
+/* ===== TOP BAR ===== */
+.topbar {
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border);
+  padding: 0.85rem 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+.topbar-left { display: flex; align-items: center; gap: 1rem; }
+.topbar-left h2 {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+.topbar-left .breadcrumb {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+.topbar-left .breadcrumb span { color: var(--brand-primary); font-weight: 600; }
+.topbar-right { display: flex; align-items: center; gap: 0.75rem; }
+.topbar-btn {
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+  color: var(--text);
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex; align-items: center; gap: 0.4rem;
+  transition: all 0.15s ease;
+}
+.topbar-btn:hover { background: var(--bg-muted); border-color: var(--brand-primary); color: var(--brand-primary); }
+.topbar-btn--primary {
+  background: var(--brand-primary);
+  color: #fff;
+  border-color: var(--brand-primary);
+}
+.topbar-btn--primary:hover { background: var(--brand-primary-hover); }
+.date-display {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  padding: 0.35rem 0.75rem;
+  background: var(--bg-muted);
+  border-radius: var(--radius-sm);
+  font-weight: 500;
+}
+
+/* ===== DASHBOARD CONTENT ===== */
+.dashboard-content {
+  padding: 1.5rem 2rem 3rem;
+  max-width: 1400px;
+}
+
+/* ===== HEADER ===== */
+.dash-header {
+  margin-bottom: 1.5rem;
+}
+.dash-header p.eyebrow {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--brand-primary);
+  margin-bottom: 0.25rem;
+}
+.dash-header h1 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+  margin-bottom: 0.25rem;
+}
+.dash-header p.subtitle {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+/* ===== ALERT BANNER ===== */
+.alert-banner {
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  animation: slideDown 0.3s ease;
+}
+@keyframes slideDown { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+.alert-banner--warning { background: var(--amber-bg); border: 1px solid var(--amber-border); color: #92400e; }
+.alert-banner--success { background: var(--green-bg); border: 1px solid var(--green-border); color: #065f46; }
+.alert-banner--danger  { background: var(--red-bg); border: 1px solid var(--red-border); color: #991b1b; }
+.alert-banner .alert-icon { font-size: 1.1rem; flex-shrink: 0; }
+.alert-banner .alert-close { margin-left: auto; cursor: pointer; opacity: 0.6; }
+.alert-banner .alert-close:hover { opacity: 1; }
+
+/* ===== KPI ROW ===== */
+.kpi-row {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+.kpi-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 1.1rem 1.25rem;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+.kpi-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+}
+.kpi-card--teal::before    { background: var(--brand-primary); }
+.kpi-card--green::before   { background: var(--green); }
+.kpi-card--blue::before    { background: var(--blue); }
+.kpi-card--amber::before   { background: var(--amber); }
+.kpi-card--purple::before  { background: var(--purple); }
+.kpi-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.6rem;
+}
+.kpi-card__label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+.kpi-card__icon {
+  width: 32px; height: 32px;
+  border-radius: var(--radius-sm);
+  display: grid; place-items: center;
+}
+.kpi-card__icon--teal   { background: var(--brand-ghost); color: var(--brand-primary); }
+.kpi-card__icon--green  { background: var(--green-bg); color: var(--green); }
+.kpi-card__icon--blue   { background: var(--blue-bg); color: var(--blue); }
+.kpi-card__icon--amber  { background: var(--amber-bg); color: var(--amber); }
+.kpi-card__icon--purple { background: var(--purple-bg); color: var(--purple); }
+.kpi-card__value {
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  line-height: 1.2;
+  margin-bottom: 0.3rem;
+}
+.kpi-card__change {
+  font-size: 0.7rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.kpi-card__change--up   { color: var(--green); }
+.kpi-card__change--down { color: var(--red); }
+.kpi-card__change--flat { color: var(--text-muted); }
+
+/* ===== PANELS ===== */
+.panels-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+.panels-grid--3col {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+.panels-grid--full {
+  grid-template-columns: 1fr;
+}
+.panel {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  transition: box-shadow 0.2s ease;
+}
+.panel:hover { box-shadow: var(--shadow-md); }
+.panel__header {
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border-light);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.panel__title {
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+.panel__subtitle {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-top: 0.1rem;
+}
+.panel__actions { display: flex; gap: 0.5rem; }
+.panel__action-btn {
+  font-size: 0.7rem;
+  color: var(--brand-primary);
+  font-weight: 600;
+  cursor: pointer;
+  background: none; border: none;
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--radius-sm);
+  transition: background 0.15s;
+}
+.panel__action-btn:hover { background: var(--brand-ghost); }
+.panel__body { padding: 1.25rem; }
+
+/* ===== TRIAL BALANCE HEALTH ===== */
+.tb-health {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 1.5rem;
+  align-items: center;
+}
+.tb-health__side { text-align: center; }
+.tb-health__label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin-bottom: 0.3rem;
+}
+.tb-health__value {
+  font-size: 1.4rem;
+  font-weight: 800;
+}
+.tb-health__value--debit { color: var(--blue); }
+.tb-health__value--credit { color: var(--green); }
+.tb-health__divider {
+  width: 2px; height: 50px;
+  background: var(--border);
+  border-radius: 2px;
+}
+.tb-status {
+  text-align: center;
+  margin-top: 1rem;
+  padding: 0.5rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+.tb-status--balanced { background: var(--green-bg); color: var(--green); }
+.tb-status--unbalanced { background: var(--red-bg); color: var(--red); }
+
+/* ===== ACCOUNT BREAKDOWN TABLE ===== */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+}
+.data-table thead th {
+  text-align: left;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+.data-table tbody td {
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid var(--border-light);
+  vertical-align: middle;
+}
+.data-table tbody tr:hover { background: var(--bg-muted); }
+.data-table tbody tr:last-child td { border-bottom: none; }
+.data-table .num { font-variant-numeric: tabular-nums; font-weight: 600; }
+.data-table .account-code {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  background: var(--bg-muted);
+  padding: 0.15rem 0.4rem;
+  border-radius: 3px;
+}
+
+/* ===== PROGRESS BAR ===== */
+.progress-bar {
+  width: 100%;
+  height: 6px;
+  background: var(--bg-muted);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.progress-bar__fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.6s ease;
+}
+.progress-bar__fill--teal   { background: var(--brand-primary); }
+.progress-bar__fill--green  { background: var(--green); }
+.progress-bar__fill--blue   { background: var(--blue); }
+.progress-bar__fill--amber  { background: var(--amber); }
+.progress-bar__fill--red    { background: var(--red); }
+.progress-bar__fill--purple { background: var(--purple); }
+
+/* ===== TASK LIST ===== */
+.task-list { list-style: none; }
+.task-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.7rem 0;
+  border-bottom: 1px solid var(--border-light);
+}
+.task-item:last-child { border-bottom: none; }
+.task-item__priority {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  margin-top: 0.35rem;
+  flex-shrink: 0;
+}
+.task-item__priority--high   { background: var(--red); }
+.task-item__priority--medium { background: var(--amber); }
+.task-item__priority--low    { background: var(--green); }
+.task-item__content { flex: 1; }
+.task-item__title { font-weight: 600; font-size: 0.8rem; margin-bottom: 0.15rem; }
+.task-item__meta { font-size: 0.68rem; color: var(--text-muted); }
+.task-item__due {
+  font-size: 0.68rem;
+  font-weight: 600;
+  white-space: nowrap;
+  padding: 0.2rem 0.5rem;
+  border-radius: var(--radius-sm);
+}
+.task-item__due--overdue { background: var(--red-bg); color: var(--red); }
+.task-item__due--soon    { background: var(--amber-bg); color: var(--amber); }
+.task-item__due--later   { background: var(--bg-muted); color: var(--text-muted); }
+
+/* ===== CHART CONTAINER ===== */
+.chart-container {
+  position: relative;
+  width: 100%;
+  height: 280px;
+}
+.chart-container--sm { height: 220px; }
+.chart-container--lg { height: 340px; }
+
+/* ===== TAX LIABILITY CARDS ===== */
+.tax-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+}
+.tax-card {
+  padding: 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-muted);
+}
+.tax-card__label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin-bottom: 0.3rem;
+}
+.tax-card__value {
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+.tax-card__rate {
+  font-size: 0.65rem;
+  color: var(--text-light);
+  margin-top: 0.15rem;
+}
+
+/* ===== JOURNAL ACTIVITY ===== */
+.journal-timeline { list-style: none; }
+.journal-entry {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.65rem 0;
+  border-bottom: 1px solid var(--border-light);
+}
+.journal-entry:last-child { border-bottom: none; }
+.journal-entry__dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  margin-top: 0.35rem;
+  flex-shrink: 0;
+}
+.journal-entry__dot--invoice { background: var(--blue); }
+.journal-entry__dot--expense { background: var(--red); }
+.journal-entry__dot--payroll { background: var(--purple); }
+.journal-entry__dot--payment { background: var(--green); }
+.journal-entry__dot--rental  { background: var(--amber); }
+.journal-entry__info { flex: 1; }
+.journal-entry__desc { font-size: 0.78rem; font-weight: 500; }
+.journal-entry__date { font-size: 0.65rem; color: var(--text-muted); }
+.journal-entry__amount { font-size: 0.8rem; font-weight: 700; white-space: nowrap; }
+
+/* ===== QUICK STATS ROW ===== */
+.quick-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+.quick-stat {
+  padding: 1rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  text-align: center;
+}
+.quick-stat__value {
+  font-size: 1.6rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+.quick-stat__label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin-top: 0.25rem;
+}
+
+/* ===== SCROLLABLE TABLE WRAPPER ===== */
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ===== STATUS BADGE ===== */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.5rem;
+  border-radius: 99px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.badge--green  { background: var(--green-bg); color: var(--green); }
+.badge--red    { background: var(--red-bg); color: var(--red); }
+.badge--amber  { background: var(--amber-bg); color: var(--amber); }
+.badge--blue   { background: var(--blue-bg); color: var(--blue); }
+.badge--purple { background: var(--purple-bg); color: var(--purple); }
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 1200px) {
+  .kpi-row { grid-template-columns: repeat(3, 1fr); }
+  .panels-grid--3col { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 900px) {
+  .sidebar { transform: translateX(-100%); }
+  .sidebar.open { transform: translateX(0); }
+  .main { margin-left: 0; }
+  .kpi-row { grid-template-columns: repeat(2, 1fr); }
+  .panels-grid { grid-template-columns: 1fr; }
+  .panels-grid--3col { grid-template-columns: 1fr; }
+  .tax-grid { grid-template-columns: repeat(2, 1fr); }
+  .quick-stats { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 600px) {
+  .kpi-row { grid-template-columns: 1fr; }
+  .dashboard-content { padding: 1rem; }
+  .tax-grid { grid-template-columns: 1fr; }
+  .quick-stats { grid-template-columns: 1fr; }
+}
+
+/* ===== SCROLLBAR ===== */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-light); }
+</style>
+</head>
+<body>
+
+<!-- ===== SIDEBAR ===== -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-brand">
+    <div class="logo">M</div>
+    <div>
+      <h1>Modulo Dev. Ltd</h1>
+      <small>CAREMS Accounting</small>
+    </div>
+  </div>
+
+  <nav class="sidebar-nav">
+    <div class="sidebar-section-label">Main</div>
+    <a href="#" class="active">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      Dashboard
+    </a>
+    <a href="#">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
+      Chart of Accounts
+    </a>
+    <a href="#">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      Journal Entries
+    </a>
+    <a href="#">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+      General Ledger
+    </a>
+    <a href="#">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="22"/><path d="M17 7l-5-5-5 5"/><path d="M17 17l-5 5-5-5"/></svg>
+      Trial Balance
+    </a>
+
+    <div class="sidebar-section-label">Invoicing & Expenses</div>
+    <a href="#">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      Invoicing
+    </a>
+    <a href="#">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+      Customer Payments
+    </a>
+    <a href="#">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+      Expenses
+    </a>
+    <a href="#">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+      Supplier Payments
+    </a>
+
+    <div class="sidebar-section-label">Payroll & Assets</div>
+    <a href="#">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+      Employee Records
+    </a>
+    <a href="#">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+      Payroll
+      <span class="badge">3</span>
+    </a>
+    <a href="#">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+      Asset Register
+    </a>
+    <a href="#">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+      PPE Schedule
+    </a>
+
+    <div class="sidebar-section-label">Compliance</div>
+    <a href="#">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 15l2 2 4-4"/></svg>
+      Tax Configuration
+    </a>
+    <a href="#">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      Financial Reports
+    </a>
+  </nav>
+
+  <div class="sidebar-user">
+    <div class="avatar">AK</div>
+    <div>
+      <div class="name">Ama Kwame</div>
+      <div class="role">Accountant</div>
+    </div>
+  </div>
+</aside>
+
+<!-- ===== MAIN CONTENT ===== -->
+<main class="main">
+  <!-- TOP BAR -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <button class="topbar-btn" id="menuToggle" style="display:none;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div>
+        <h2>Accountant Dashboard</h2>
+        <div class="breadcrumb">Accounting Workspace / <span>Dashboard</span></div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <div class="date-display" id="currentDate"></div>
+      <button class="topbar-btn" onclick="window.location.reload()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        Refresh
+      </button>
+      <button class="topbar-btn topbar-btn--primary">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        New Journal Entry
+      </button>
+    </div>
+  </header>
+
+  <!-- DASHBOARD CONTENT -->
+  <div class="dashboard-content">
+    <!-- HEADER -->
+    <div class="dash-header">
+      <p class="eyebrow">Accounting Workspace</p>
+      <h1>Financial Command Centre</h1>
+      <p class="subtitle">Monitor ledger health, cash flow, receivables, payables, tax obligations, and operational tasks.</p>
+    </div>
+
+    <!-- ALERT BANNER -->
+    <div class="alert-banner alert-banner--warning" id="alertBanner">
+      <span class="alert-icon">&#9888;</span>
+      <div>
+        <strong>2 invoices overdue</strong> — GH¢ 87,500.00 total outstanding from Manet &amp; Tse Addo projects. Follow-up required.
+      </div>
+      <span class="alert-close" onclick="document.getElementById('alertBanner').style.display='none'">">&times;</span>
+    </div>
+
+    <!-- KPI CARDS -->
+    <div class="kpi-row">
+      <div class="kpi-card kpi-card--teal">
+        <div class="kpi-card__header">
+          <span class="kpi-card__label">Cash Position</span>
+          <div class="kpi-card__icon kpi-card__icon--teal">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>
+          </div>
+        </div>
+        <div class="kpi-card__value">GH¢ 1,284,350.00</div>
+        <div class="kpi-card__change kpi-card__change--up">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="18 15 12 9 6 15"/></svg>
+          +12.4% vs last month
+        </div>
+      </div>
+
+      <div class="kpi-card kpi-card--green">
+        <div class="kpi-card__header">
+          <span class="kpi-card__label">Revenue (YTD)</span>
+          <div class="kpi-card__icon kpi-card__icon--green">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          </div>
+        </div>
+        <div class="kpi-card__value">GH¢ 4,672,800.00</div>
+        <div class="kpi-card__change kpi-card__change--up">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="18 15 12 9 6 15"/></svg>
+          +8.2% vs last period
+        </div>
+      </div>
+
+      <div class="kpi-card kpi-card--blue">
+        <div class="kpi-card__header">
+          <span class="kpi-card__label">Accounts Receivable</span>
+          <div class="kpi-card__icon kpi-card__icon--blue">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
+          </div>
+        </div>
+        <div class="kpi-card__value">GH¢ 892,400.00</div>
+        <div class="kpi-card__change kpi-card__change--down">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="6 9 12 15 18 9"/></svg>
+          12 outstanding invoices
+        </div>
+      </div>
+
+      <div class="kpi-card kpi-card--amber">
+        <div class="kpi-card__header">
+          <span class="kpi-card__label">Accounts Payable</span>
+          <div class="kpi-card__icon kpi-card__icon--amber">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+          </div>
+        </div>
+        <div class="kpi-card__value">GH¢ 534,200.00</div>
+        <div class="kpi-card__change kpi-card__change--flat">
+          8 suppliers pending
+        </div>
+      </div>
+
+      <div class="kpi-card kpi-card--purple">
+        <div class="kpi-card__header">
+          <span class="kpi-card__label">Tax Liabilities</span>
+          <div class="kpi-card__icon kpi-card__icon--purple">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>
+          </div>
+        </div>
+        <div class="kpi-card__value">GH¢ 187,680.00</div>
+        <div class="kpi-card__change kpi-card__change--down">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="6 9 12 15 18 9"/></svg>
+          Due 15th Aug 2026
+        </div>
+      </div>
+    </div>
+
+    <!-- ROW 2: TRIAL BALANCE + REVENUE BREAKDOWN -->
+    <div class="panels-grid">
+      <!-- TRIAL BALANCE HEALTH -->
+      <div class="panel">
+        <div class="panel__header">
+          <div>
+            <div class="panel__title">Trial Balance Health</div>
+            <div class="panel__subtitle">As of July 2026</div>
+          </div>
+          <div class="panel__actions">
+            <button class="panel__action-btn">View Full TB</button>
+          </div>
+        </div>
+        <div class="panel__body">
+          <div class="tb-health">
+            <div class="tb-health__side">
+              <div class="tb-health__label">Total Debits</div>
+              <div class="tb-health__value tb-health__value--debit">GH¢ 8,412,560</div>
+            </div>
+            <div class="tb-health__divider"></div>
+            <div class="tb-health__side">
+              <div class="tb-health__label">Total Credits</div>
+              <div class="tb-health__value tb-health__value--credit">GH¢ 8,412,560</div>
+            </div>
+          </div>
+          <div class="tb-status tb-status--balanced">
+            &#10003; Balanced — Debits equal Credits (GH¢ 0.00 difference)
+          </div>
+          <div style="margin-top:1.25rem;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
+              <span style="font-size:0.72rem;font-weight:600;">Account Distribution by Type</span>
+            </div>
+            <div class="chart-container--sm">
+              <canvas id="accountTypeChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- REVENUE BREAKDOWN -->
+      <div class="panel">
+        <div class="panel__header">
+          <div>
+            <div class="panel__title">Revenue Breakdown (YTD)</div>
+            <div class="panel__subtitle">By reporting group — FY 2026</div>
+          </div>
+          <div class="panel__actions">
+            <button class="panel__action-btn">Income Statement</button>
+          </div>
+        </div>
+        <div class="panel__body">
+          <div class="chart-container">
+            <canvas id="revenueChart"></canvas>
+          </div>
+          <div style="margin-top:0.75rem;">
+            <table class="data-table">
+              <thead>
+                <tr><th>Category</th><th>Amount (GH¢)</th><th>% of Total</th><th>Trend</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><span class="account-code">4200</span> Construction Revenue</td>
+                  <td class="num">2,845,600.00</td>
+                  <td class="num">60.9%</td>
+                  <td><span class="badge badge--green">+15.2%</span></td>
+                </tr>
+                <tr>
+                  <td><span class="account-code">41xx</span> Professional Services</td>
+                  <td class="num">987,200.00</td>
+                  <td class="num">21.1%</td>
+                  <td><span class="badge badge--green">+6.8%</span></td>
+                </tr>
+                <tr>
+                  <td><span class="account-code">43xx</span> Equipment Rental</td>
+                  <td class="num">612,000.00</td>
+                  <td class="num">13.1%</td>
+                  <td><span class="badge badge--amber">-2.4%</span></td>
+                </tr>
+                <tr>
+                  <td><span class="account-code">44xx</span> Other Income</td>
+                  <td class="num">228,000.00</td>
+                  <td class="num">4.9%</td>
+                  <td><span class="badge badge--green">+1.1%</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ROW 3: CASH FLOW TREND + EXPENSE ANALYSIS -->
+    <div class="panels-grid">
+      <!-- CASH FLOW TREND -->
+      <div class="panel">
+        <div class="panel__header">
+          <div>
+            <div class="panel__title">Cash Flow Trend</div>
+            <div class="panel__subtitle">Monthly inflows vs outflows — 7 months</div>
+          </div>
+          <div class="panel__actions">
+            <button class="panel__action-btn">Cash Flow Stmt</button>
+          </div>
+        </div>
+        <div class="panel__body">
+          <div class="chart-container--lg">
+            <canvas id="cashFlowChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- EXPENSE ANALYSIS -->
+      <div class="panel">
+        <div class="panel__header">
+          <div>
+            <div class="panel__title">Expense Analysis (YTD)</div>
+            <div class="panel__subtitle">By cost category — FY 2026</div>
+          </div>
+          <div class="panel__actions">
+            <button class="panel__action-btn">Full Report</button>
+          </div>
+        </div>
+        <div class="panel__body">
+          <div class="chart-container">
+            <canvas id="expenseChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- QUICK STATS -->
+    <div class="quick-stats">
+      <div class="quick-stat">
+        <div class="quick-stat__value" style="color:var(--brand-primary);">118</div>
+        <div class="quick-stat__label">Chart of Accounts</div>
+      </div>
+      <div class="quick-stat">
+        <div class="quick-stat__value" style="color:var(--blue);">347</div>
+        <div class="quick-stat__label">Journal Entries</div>
+      </div>
+      <div class="quick-stat">
+        <div class="quick-stat__value" style="color:var(--amber);">8</div>
+        <div class="quick-stat__label">Active Projects</div>
+      </div>
+      <div class="quick-stat">
+        <div class="quick-stat__value" style="color:var(--green);">24</div>
+        <div class="quick-stat__label">Employees (Active)</div>
+      </div>
+    </div>
+
+    <!-- ROW 4: TAX LIABILITIES + ACCOUNTS RECEIVABLE AGING -->
+    <div class="panels-grid">
+      <!-- TAX LIABILITIES -->
+      <div class="panel">
+        <div class="panel__header">
+          <div>
+            <div class="panel__title">Tax Liabilities Summary</div>
+            <div class="panel__subtitle">Ghana Revenue Authority obligations</div>
+          </div>
+          <div class="panel__actions">
+            <button class="panel__action-btn">Tax Config</button>
+          </div>
+        </div>
+        <div class="panel__body">
+          <div class="tax-grid">
+            <div class="tax-card">
+              <div class="tax-card__label">VAT Payable</div>
+              <div class="tax-card__value" style="color:var(--blue);">GH¢ 68,420.00</div>
+              <div class="tax-card__rate">Rate: 15.0% · Net: GH¢ 52,860.00</div>
+            </div>
+            <div class="tax-card">
+              <div class="tax-card__label">PAYE Payable</div>
+              <div class="tax-card__value" style="color:var(--purple);">GH¢ 42,180.00</div>
+              <div class="tax-card__rate">7 bands · 0–35% progressive</div>
+            </div>
+            <div class="tax-card">
+              <div class="tax-card__label">SSNIT Payable</div>
+              <div class="tax-card__value" style="color:var(--amber);">GH¢ 38,940.00</div>
+              <div class="tax-card__rate">Emp: 5.5% + Emp’r: 13.0%</div>
+            </div>
+            <div class="tax-card">
+              <div class="tax-card__label">NHIL Payable</div>
+              <div class="tax-card__value" style="color:var(--green);">GH¢ 18,600.00</div>
+              <div class="tax-card__rate">Rate: 2.5%</div>
+            </div>
+            <div class="tax-card">
+              <div class="tax-card__label">GETFund Levy</div>
+              <div class="tax-card__value" style="color:var(--cyan);">GH¢ 18,600.00</div>
+              <div class="tax-card__rate">Rate: 2.5%</div>
+            </div>
+            <div class="tax-card">
+              <div class="tax-card__label">Corporate Tax</div>
+              <div class="tax-card__value" style="color:var(--red);">GH¢ —</div>
+              <div class="tax-card__rate">25% on profit · Est. FY end</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ACCOUNTS RECEIVABLE AGING -->
+      <div class="panel">
+        <div class="panel__header">
+          <div>
+            <div class="panel__title">Accounts Receivable Aging</div>
+            <div class="panel__subtitle">Outstanding receivables by age bracket</div>
+          </div>
+        </div>
+        <div class="panel__body">
+          <div class="chart-container--sm">
+            <canvas id="arAgingChart"></canvas>
+          </div>
+          <div style="margin-top:1rem;">
+            <table class="data-table">
+              <thead>
+                <tr><th>Bracket</th><th>Amount (GH¢)</th><th>%</th><th>Risk</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Current (0–30 days)</td>
+                  <td class="num">412,000.00</td>
+                  <td class="num">46.2%</td>
+                  <td><span class="badge badge--green">Low</span></td>
+                </tr>
+                <tr>
+                  <td>31–60 days</td>
+                  <td class="num">198,400.00</td>
+                  <td class="num">22.2%</td>
+                  <td><span class="badge badge--amber">Medium</span></td>
+                </tr>
+                <tr>
+                  <td>61–90 days</td>
+                  <td class="num">194,500.00</td>
+                  <td class="num">21.8%</td>
+                  <td><span class="badge badge--amber">High</span></td>
+                </tr>
+                <tr>
+                  <td>90+ days</td>
+                  <td class="num">87,500.00</td>
+                  <td class="num">9.8%</td>
+                  <td><span class="badge badge--red">Critical</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ROW 5: TOP PROJECTS + JOURNAL ACTIVITY -->
+    <div class="panels-grid">
+      <!-- PROJECT BUDGET VS ACTUAL -->
+      <div class="panel">
+        <div class="panel__header">
+          <div>
+            <div class="panel__title">Project Budget vs Actual</div>
+            <div class="panel__subtitle">Top 5 projects by contract value</div>
+          </div>
+          <div class="panel__actions">
+            <button class="panel__action-btn">All Projects</button>
+          </div>
+        </div>
+        <div class="panel__body">
+          <div class="table-scroll">
+            <table class="data-table">
+              <thead>
+                <tr><th>Project</th><th>Contract Value</th><th>Spent to Date</th><th>Utilization</th><th>Status</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Manet Housing Project</strong></td>
+                  <td class="num">1,200,000.00</td>
+                  <td class="num">864,000.00</td>
+                  <td>
+                    <div style="display:flex;align-items:center;gap:0.5rem;">
+                      <div class="progress-bar" style="width:80px;"><div class="progress-bar__fill progress-bar__fill--green" style="width:72%;"></div></div>
+                      <span class="num" style="font-size:0.72rem;">72%</span>
+                    </div>
+                  </td>
+                  <td><span class="badge badge--green">On Track</span></td>
+                </tr>
+                <tr>
+                  <td><strong>Tse Addo Commercial</strong></td>
+                  <td class="num">980,000.00</td>
+                  <td class="num">735,000.00</td>
+                  <td>
+                    <div style="display:flex;align-items:center;gap:0.5rem;">
+                      <div class="progress-bar" style="width:80px;"><div class="progress-bar__fill progress-bar__fill--amber" style="width:75%;"></div></div>
+                      <span class="num" style="font-size:0.72rem;">75%</span>
+                    </div>
+                  </td>
+                  <td><span class="badge badge--amber">Watch</span></td>
+                </tr>
+                <tr>
+                  <td><strong>Tamale Office Complex</strong></td>
+                  <td class="num">750,000.00</td>
+                  <td class="num">375,000.00</td>
+                  <td>
+                    <div style="display:flex;align-items:center;gap:0.5rem;">
+                      <div class="progress-bar" style="width:80px;"><div class="progress-bar__fill progress-bar__fill--teal" style="width:50%;"></div></div>
+                      <span class="num" style="font-size:0.72rem;">50%</span>
+                    </div>
+                  </td>
+                  <td><span class="badge badge--green">On Track</span></td>
+                </tr>
+                <tr>
+                  <td><strong>Katamanso Residence</strong></td>
+                  <td class="num">620,000.00</td>
+                  <td class="num">496,000.00</td>
+                  <td>
+                    <div style="display:flex;align-items:center;gap:0.5rem;">
+                      <div class="progress-bar" style="width:80px;"><div class="progress-bar__fill progress-bar__fill--red" style="width:80%;"></div></div>
+                      <span class="num" style="font-size:0.72rem;">80%</span>
+                    </div>
+                  </td>
+                  <td><span class="badge badge--red">Over Budget</span></td>
+                </tr>
+                <tr>
+                  <td><strong>Airport Terminal Reno</strong></td>
+                  <td class="num">540,000.00</td>
+                  <td class="num">216,000.00</td>
+                  <td>
+                    <div style="display:flex;align-items:center;gap:0.5rem;">
+                      <div class="progress-bar" style="width:80px;"><div class="progress-bar__fill progress-bar__fill--teal" style="width:40%;"></div></div>
+                      <span class="num" style="font-size:0.72rem;">40%</span>
+                    </div>
+                  </td>
+                  <td><span class="badge badge--green">On Track</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- RECENT JOURNAL ACTIVITY -->
+      <div class="panel">
+        <div class="panel__header">
+          <div>
+            <div class="panel__title">Recent Journal Activity</div>
+            <div class="panel__subtitle">Latest postings across all source types</div>
+          </div>
+          <div class="panel__actions">
+            <button class="panel__action-btn">View All</button>
+          </div>
+        </div>
+        <div class="panel__body">
+          <ul class="journal-timeline">
+            <li class="journal-entry">
+              <div class="journal-entry__dot journal-entry__dot--invoice"></div>
+              <div class="journal-entry__info">
+                <div class="journal-entry__desc">INV-2026-0047 — Manet Housing (Completion Assessment 72%)</div>
+                <div class="journal-entry__date">01 Aug 2026 · Period 2026-08 · Posted</div>
+              </div>
+              <div class="journal-entry__amount" style="color:var(--blue);">+GH¢ 216,000</div>
+            </li>
+            <li class="journal-entry">
+              <div class="journal-entry__dot journal-entry__dot--payment"></div>
+              <div class="journal-entry__info">
+                <div class="journal-entry__desc">Payment received — Tse Addo Commercial (Ecobank)</div>
+                <div class="journal-entry__date">31 Jul 2026 · Period 2026-07 · Posted</div>
+              </div>
+              <div class="journal-entry__amount" style="color:var(--green);">+GH¢ 150,000</div>
+            </li>
+            <li class="journal-entry">
+              <div class="journal-entry__dot journal-entry__dot--expense"></div>
+              <div class="journal-entry__info">
+                <div class="journal-entry__desc">Supplier invoice — Building materials (Katamanso)</div>
+                <div class="journal-entry__date">30 Jul 2026 · Period 2026-07 · Posted</div>
+              </div>
+              <div class="journal-entry__amount" style="color:var(--red);">–GH¢ 45,800</div>
+            </li>
+            <li class="journal-entry">
+              <div class="journal-entry__dot journal-entry__dot--payroll"></div>
+              <div class="journal-entry__info">
+                <div class="journal-entry__desc">Payroll run — July 2026 (24 employees)</div>
+                <div class="journal-entry__date">28 Jul 2026 · Period 2026-07 · Posted</div>
+              </div>
+              <div class="journal-entry__amount" style="color:var(--purple);">–GH¢ 128,400</div>
+            </li>
+            <li class="journal-entry">
+              <div class="journal-entry__dot journal-entry__dot--rental"></div>
+              <div class="journal-entry__info">
+                <div class="journal-entry__desc">Rental invoice — Excavator (Airport Terminal project)</div>
+                <div class="journal-entry__date">27 Jul 2026 · Period 2026-07 · Posted</div>
+              </div>
+              <div class="journal-entry__amount" style="color:var(--amber);">+GH¢ 18,000</div>
+            </li>
+            <li class="journal-entry">
+              <div class="journal-entry__dot journal-entry__dot--payment"></div>
+              <div class="journal-entry__info">
+                <div class="journal-entry__desc">Supplier payment — Subcontractor (Tamale Office)</div>
+                <div class="journal-entry__date">26 Jul 2026 · Period 2026-07 · Posted</div>
+              </div>
+              <div class="journal-entry__amount" style="color:var(--red);">–GH¢ 62,000</div>
+            </li>
+            <li class="journal-entry">
+              <div class="journal-entry__dot journal-entry__dot--invoice"></div>
+              <div class="journal-entry__info">
+                <div class="journal-entry__desc">INV-2026-0046 — 3D Visualization (Consultancy)</div>
+                <div class="journal-entry__date">25 Jul 2026 · Period 2026-07 · Posted</div>
+              </div>
+              <div class="journal-entry__amount" style="color:var(--blue);">+GH¢ 35,000</div>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- ROW 6: BALANCE SHEET SNAPSHOT + TASKS -->
+    <div class="panels-grid">
+      <!-- BALANCE SHEET SNAPSHOT -->
+      <div class="panel">
+        <div class="panel__header">
+          <div>
+            <div class="panel__title">Balance Sheet Snapshot</div>
+            <div class="panel__subtitle">Statement of Financial Position — July 2026</div>
+          </div>
+          <div class="panel__actions">
+            <button class="panel__action-btn">Full SOFP</button>
+          </div>
+        </div>
+        <div class="panel__body">
+          <div class="chart-container--sm">
+            <canvas id="balanceSheetChart"></canvas>
+          </div>
+          <div style="margin-top:1rem;">
+            <table class="data-table">
+              <thead>
+                <tr><th>Line Item</th><th>Amount (GH¢)</th></tr>
+              </thead>
+              <tbody>
+                <tr><td><strong>Total Current Assets</strong></td><td class="num">2,876,550.00</td></tr>
+                <tr><td><strong>Non-Current Assets (net)</strong></td><td class="num">1,245,000.00</td></tr>
+                <tr style="border-top:2px solid var(--border);">
+                  <td><strong>Total Assets</strong></td>
+                  <td class="num" style="font-size:0.9rem;">4,121,550.00</td></tr>
+                <tr><td><strong>Total Current Liabilities</strong></td><td class="num" style="color:var(--red);">(721,880.00)</td></tr>
+                <tr><td><strong>Non-Current Liabilities</strong></td><td class="num" style="color:var(--red);">(250,000.00)</td></tr>
+                <tr><td><strong>Net Assets</strong></td><td class="num">3,149,670.00</td></tr>
+                <tr><td><strong>Equity</strong></td><td class="num">3,149,670.00</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- PENDING TASKS -->
+      <div class="panel">
+        <div class="panel__header">
+          <div>
+            <div class="panel__title">Pending Accounting Tasks</div>
+            <div class="panel__subtitle">Action items requiring attention</div>
+          </div>
+          <div class="panel__actions">
+            <span class="badge badge--amber" style="font-size:0.7rem;">6 pending</span>
+          </div>
+        </div>
+        <div class="panel__body">
+          <ul class="task-list">
+            <li class="task-item">
+              <div class="task-item__priority task-item__priority--high"></div>
+              <div class="task-item__content">
+                <div class="task-item__title">File VAT returns for July 2026</div>
+                <div class="task-item__meta">GRA deadline: 15 Aug 2026 · VAT + NHIL + GETFund</div>
+              </div>
+              <span class="task-item__due task-item__due--overdue">Due today</span>
+            </li>
+            <li class="task-item">
+              <div class="task-item__priority task-item__priority--high"></div>
+              <div class="task-item__content">
+                <div class="task-item__title">Post monthly depreciation journal</div>
+                <div class="task-item__meta">PPE Schedule · Straight-line method · 6 asset categories</div>
+              </div>
+              <span class="task-item__due task-item__due--soon">3 days</span>
+            </li>
+            <li class="task-item">
+              <div class="task-item__priority task-item__priority--high"></div>
+              <div class="task-item__content">
+                <div class="task-item__title">Process August 2026 payroll run</div>
+                <div class="task-item__meta">24 active employees · PAYE + SSNIT deductions</div>
+              </div>
+              <span class="task-item__due task-item__due--soon">5 days</span>
+            </li>
+            <li class="task-item">
+              <div class="task-item__priority task-item__priority--medium"></div>
+              <div class="task-item__content">
+                <div class="task-item__title">Review Katamanso project over-budget variance</div>
+                <div class="task-item__meta">Budget: GH¢ 620k · Actual: GH¢ 496k (80%)</div>
+              </div>
+              <span class="task-item__due task-item__due--later">12 Aug</span>
+            </li>
+            <li class="task-item">
+              <div class="task-item__priority task-item__priority--medium"></div>
+              <div class="task-item__content">
+                <div class="task-item__title">Reconcile bank statements (July)</div>
+                <div class="task-item__meta">Ecobank, Fidelity, GCB, Stanbic, MTN MoMo</div>
+              </div>
+              <span class="task-item__due task-item__due--later">15 Aug</span>
+            </li>
+            <li class="task-item">
+              <div class="task-item__priority task-item__priority--low"></div>
+              <div class="task-item__content">
+                <div class="task-item__title">Approve 3 pending site reports</div>
+                <div class="task-item__meta">Submitted by Project Managers · Awaiting review</div>
+              </div>
+              <span class="task-item__due task-item__due--later">20 Aug</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- ROW 7: ASSET REGISTER SUMMARY -->
+    <div class="panels-grid panels-grid--full">
+      <div class="panel">
+        <div class="panel__header">
+          <div>
+            <div class="panel__title">Fixed Asset Register Overview</div>
+            <div class="panel__subtitle">PPE categories — Cost vs Accumulated Depreciation vs Net Book Value</div>
+          </div>
+          <div class="panel__actions">
+            <button class="panel__action-btn">Full Register</button>
+            <button class="panel__action-btn">PPE Schedule</button>
+          </div>
+        </div>
+        <div class="panel__body">
+          <div style="display:grid;grid-template-columns:2fr 1fr;gap:1.5rem;align-items:start;">
+            <div class="chart-container--sm">
+              <canvas id="assetChart"></canvas>
+            </div>
+            <div class="table-scroll">
+              <table class="data-table">
+                <thead>
+                  <tr><th>Category</th><th>Cost (GH¢)</th><th>Acc. Dep.</th><th>NBV</th></tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><span class="account-code">1200</span> Furniture & Fixtures</td>
+                    <td class="num">85,000</td>
+                    <td class="num" style="color:var(--red);">(34,000)</td>
+                    <td class="num" style="font-weight:700;">51,000</td>
+                  </tr>
+                  <tr>
+                    <td><span class="account-code">1210</span> Computers & IT</td>
+                    <td class="num">142,000</td>
+                    <td class="num" style="color:var(--red);">(71,000)</td>
+                    <td class="num" style="font-weight:700;">71,000</td>
+                  </tr>
+                  <tr>
+                    <td><span class="account-code">1220</span> Construction Equipment</td>
+                    <td class="num">680,000</td>
+                    <td class="num" style="color:var(--red);">(272,000)</td>
+                    <td class="num" style="font-weight:700;">408,000</td>
+                  </tr>
+                  <tr>
+                    <td><span class="account-code">1230</span> Motor Vehicles</td>
+                    <td class="num">320,000</td>
+                    <td class="num" style="color:var(--red);">(128,000)</td>
+                    <td class="num" style="font-weight:700;">192,000</td>
+                  </tr>
+                  <tr>
+                    <td><span class="account-code">1240</span> Office Equipment</td>
+                    <td class="num">48,000</td>
+                    <td class="num" style="color:var(--red);">(19,200)</td>
+                    <td class="num" style="font-weight:700;">28,800</td>
+                  </tr>
+                  <tr>
+                    <td><span class="account-code">1250</span> Rental Equipment</td>
+                    <td class="num">460,000</td>
+                    <td class="num" style="color:var(--red);">(215,800)</td>
+                    <td class="num" style="font-weight:700;">244,200</td>
+                  </tr>
+                  <tr style="border-top:2px solid var(--border);">
+                    <td><strong>Total</strong></td>
+                    <td class="num" style="font-weight:700;">1,735,000</td>
+                    <td class="num" style="color:var(--red);font-weight:700;">(740,000)</td>
+                    <td class="num" style="font-weight:700;">995,000</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /dashboard-content -->
+</main>
+
+<!-- ===== CHARTS ===== -->
+<script>
+// Set current date
+document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-GB', {
+  weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+});
+
+// Responsive sidebar toggle
+const menuBtn = document.getElementById('menuToggle');
+const sidebar = document.getElementById('sidebar');
+function checkMobile() {
+  if (window.innerWidth <= 900) {
+    menuBtn.style.display = 'flex';
+  } else {
+    menuBtn.style.display = 'none';
+    sidebar.classList.remove('open');
+  }
+}
+checkMobile();
+window.addEventListener('resize', checkMobile);
+menuBtn.addEventListener('click', () => sidebar.classList.toggle('open'));
+
+// ===== CHART.JS GLOBAL CONFIG =====
+Chart.defaults.font.family = "'Inter', sans-serif";
+Chart.defaults.font.size = 11;
+Chart.defaults.color = '#6b7280';
+Chart.defaults.plugins.legend.labels.usePointStyle = true;
+Chart.defaults.plugins.legend.labels.pointStyleWidth = 8;
+Chart.defaults.plugins.legend.labels.padding = 16;
+Chart.defaults.scale.grid = { color: 'rgba(0,0,0,0.04)' };
+
+// ===== ACCOUNT TYPE DOUGHNUT =====
+new Chart(document.getElementById('accountTypeChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Assets', 'Liabilities', 'Equity', 'Revenue', 'Expenses', 'Contra-Assets'],
+    datasets: [{
+      data: [32, 22, 4, 14, 24, 4],
+      backgroundColor: ['#0d9488', '#e11d48', '#7c3aed', '#2563eb', '#d97706', '#9ca3af'],
+      borderWidth: 0,
+      hoverOffset: 6
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    cutout: '65%',
+    plugins: {
+      legend: { position: 'right', labels: { font: { size: 10 }, padding: 10 } }
+    }
+  }
+});
+
+// ===== REVENUE BREAKDOWN BAR =====
+new Chart(document.getElementById('revenueChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Construction
+Contract', 'Professional
+Services', 'Equipment
+Rental', 'Other
+Income'],
+    datasets: [{
+      label: 'Revenue (GH¢)',
+      data: [2845600, 987200, 612000, 228000],
+      backgroundColor: ['#0d9488', '#2563eb', '#d97706', '#7c3aed'],
+      borderRadius: 6,
+      borderSkipped: false,
+      barPercentage: 0.65
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: function(ctx) { return 'GH¢ ' + ctx.raw.toLocaleString(); }
+        }
+      }
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        ticks: {
+          callback: function(v) { return 'GH¢ ' + (v/1000000).toFixed(1) + 'M'; }
+        }
+      },
+      x: { grid: { display: false } }
+    }
+  }
+});
+
+// ===== CASH FLOW TREND =====
+new Chart(document.getElementById('cashFlowChart'), {
+  type: 'line',
+  data: {
+    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'],
+    datasets: [
+      {
+        label: 'Cash Inflows',
+        data: [420000, 380000, 510000, 470000, 620000, 580000, 710000],
+        borderColor: '#059669',
+        backgroundColor: 'rgba(5,150,105,0.08)',
+        fill: true,
+        tension: 0.4,
+        borderWidth: 2.5,
+        pointRadius: 4,
+        pointBackgroundColor: '#059669'
+      },
+      {
+        label: 'Cash Outflows',
+        data: [340000, 310000, 430000, 390000, 510000, 470000, 560000],
+        borderColor: '#dc2626',
+        backgroundColor: 'rgba(220,38,38,0.06)',
+        fill: true,
+        tension: 0.4,
+        borderWidth: 2.5,
+        pointRadius: 4,
+        pointBackgroundColor: '#dc2626'
+      },
+      {
+        label: 'Net Cash Flow',
+        data: [80000, 70000, 80000, 80000, 110000, 110000, 150000],
+        borderColor: '#0d9488',
+        backgroundColor: 'transparent',
+        borderWidth: 2,
+        borderDash: [6, 3],
+        tension: 0.4,
+        pointRadius: 3,
+        pointBackgroundColor: '#0d9488'
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      tooltip: {
+        callbacks: {
+          label: function(ctx) { return ctx.dataset.label + ': GH¢ ' + ctx.raw.toLocaleString(); }
+        }
+      }
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        ticks: {
+          callback: function(v) { return 'GH¢ ' + (v/1000) + 'k'; }
+        }
+      },
+      x: { grid: { display: false } }
+    }
+  }
+});
+
+// ===== EXPENSE ANALYSIS DOUGHNUT =====
+new Chart(document.getElementById('expenseChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Direct Project Costs', 'Admin & Operating', 'Payroll (Employer SSNIT)', 'Finance Costs', 'Tax Expenses'],
+    datasets: [{
+      data: [1850000, 420000, 198000, 35000, 12000],
+      backgroundColor: ['#e11d48', '#2563eb', '#7c3aed', '#d97706', '#9ca3af'],
+      borderWidth: 0,
+      hoverOffset: 8
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    cutout: '55%',
+    plugins: {
+      legend: { position: 'bottom', labels: { font: { size: 10 }, padding: 12 } },
+      tooltip: {
+        callbacks: {
+          label: function(ctx) {
+            const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+            const pct = ((ctx.raw / total) * 100).toFixed(1);
+            return ctx.label + ': GH¢ ' + ctx.raw.toLocaleString() + ' (' + pct + '%)';
+          }
+        }
+      }
+    }
+  }
+});
+
+// ===== AR AGING CHART =====
+new Chart(document.getElementById('arAgingChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Current\n(0-30 days)', '31-60\ndays', '61-90\ndays', '90+\ndays'],
+    datasets: [{
+      label: 'Outstanding (GH¢)',
+      data: [412000, 198400, 194500, 87500],
+      backgroundColor: ['#059669', '#d97706', '#d97706', '#dc2626'],
+      borderRadius: 6,
+      borderSkipped: false,
+      barPercentage: 0.6
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    indexAxis: 'y',
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: function(ctx) { return 'GH¢ ' + ctx.raw.toLocaleString(); }
+        }
+      }
+    },
+    scales: {
+      x: {
+        beginAtZero: true,
+        ticks: { callback: function(v) { return 'GH¢ ' + (v/1000) + 'k'; } }
+      },
+      y: { grid: { display: false } }
+    }
+  }
+});
+
+// ===== BALANCE SHEET CHART =====
+new Chart(document.getElementById('balanceSheetChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Current Assets', 'Non-Current Assets', 'Current Liab.', 'Non-Current Liab.', 'Equity'],
+    datasets: [
+      {
+        label: 'Amount (GH¢)',
+        data: [2876550, 1245000, 721880, 250000, 3149670],
+        backgroundColor: function(ctx) {
+          const colors = ['#0d9488', '#0891b2', '#e11d48', '#d97706', '#7c3aed'];
+          return colors[ctx.dataIndex];
+        },
+        borderRadius: 6,
+        borderSkipped: false,
+        barPercentage: 0.55
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: function(ctx) { return 'GH¢ ' + ctx.raw.toLocaleString(); }
+        }
+      }
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        ticks: { callback: function(v) { return 'GH¢ ' + (v/1000000).toFixed(1) + 'M'; } }
+      },
+      x: { grid: { display: false } }
+    }
+  }
+});
+
+// ===== ASSET REGISTER CHART =====
+new Chart(document.getElementById('assetChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Furniture &
+Fixtures', 'Computers
+& IT', 'Construction
+Equipment', 'Motor
+Vehicles', 'Office
+Equipment', 'Rental
+Equipment'],
+    datasets: [
+      {
+        label: 'Cost',
+        data: [85000, 142000, 680000, 320000, 48000, 460000],
+        backgroundColor: '#0d9488',
+        borderRadius: 4,
+        barPercentage: 0.7
+      },
+      {
+        label: 'Accumulated Depreciation',
+        data: [34000, 71000, 272000, 128000, 19200, 215800],
+        backgroundColor: '#dc2626',
+        borderRadius: 4,
+        barPercentage: 0.7
+      },
+      {
+        label: 'Net Book Value',
+        data: [51000, 71000, 408000, 192000, 28800, 244200],
+        backgroundColor: '#2563eb',
+        borderRadius: 4,
+        barPercentage: 0.7
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'top', labels: { font: { size: 10 }, padding: 12 } },
+      tooltip: {
+        callbacks: {
+          label: function(ctx) { return ctx.dataset.label + ': GH¢ ' + ctx.raw.toLocaleString(); }
+        }
+      }
+    },
+    scales: {
+      y: {
+        stacked: false,
+        beginAtZero: true,
+        ticks: { callback: function(v) { return 'GH¢ ' + (v/1000) + 'k'; } }
+      },
+      x: { grid: { display: false } }
+    }
+  }
+});
+</script>
+
+</body>
+</html>
