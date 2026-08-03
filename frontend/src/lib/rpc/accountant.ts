@@ -677,6 +677,10 @@ export async function listPendingSiteReports(page = 1, limit = 100): Promise<Acc
   return { ok: true, data: rows as SiteReport[], raw: result.raw }
 }
 
+export async function submitSiteReport(projectId: string, reportDate: string, notes?: string | null, photoUrl?: string | null): Promise<AccountantRpcResult<{ success: boolean }>> {
+  return callRpc('site_report_submit', { p_project_id: projectId, p_report_date: reportDate, p_notes: notes, p_photo_url: photoUrl })
+}
+
 export async function siteReportApprove(reportId: string): Promise<AccountantRpcResult<{ success: boolean }>> {
   return callRpc('site_report_approve', { p_report_id: reportId })
 }

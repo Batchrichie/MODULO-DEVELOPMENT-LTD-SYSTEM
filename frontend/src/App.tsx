@@ -39,7 +39,7 @@ import { CompletionAssessmentsPage } from './pages/projectManager/CompletionAsse
 import { BudgetTrackingPage } from './pages/projectManager/BudgetTrackingPage'
 import { ProjectCostingPage } from './pages/projectManager/ProjectCostingPage'
 import { SiteReportsPage } from './pages/projectManager/SiteReportsPage'
-import { SiteReportsReviewPage } from './pages/projectManager/SiteReportsReviewPage'
+import { SiteReportsReviewPage as AccountantSiteReportsReviewPage } from './pages/accountant/SiteReportsReviewPage'
 import { AuditLogPage } from './pages/admin/AuditLogPage'
 import { RolesPermissionsPage } from './pages/admin/RolesPermissionsPage'
 import { SecurityMonitoringPage } from './pages/admin/SecurityMonitoringPage'
@@ -132,7 +132,7 @@ function App() {
           '/accountant/asset-management/ppe-schedule': <PpeSchedulePage />,
           '/accountant/asset-management/depreciation-journal': <DepreciationJournalPage />,
           '/accountant/asset-management/rentals': <RentalsPage />,
-          '/accountant/site-reports-review': <SiteReportsReviewPage />,
+          '/accountant/site-reports-review': <AccountantSiteReportsReviewPage />,
           '/accountant/projects': <AccountantProjectsPage />,
           '/accountant/compliance-tax/tax': <TaxPage />,
           '/accountant/budgeting/budget-vs-actual': <AccountantBudgetVsActualPage />,
@@ -153,7 +153,6 @@ function App() {
           '/project-manager/completion-assessments': <CompletionAssessmentsPage />,
           '/project-manager/budget-tracking': <BudgetTrackingPage />,
           '/project-manager/site-reports': <SiteReportsPage />,
-          '/project-manager/site-reports-review': <SiteReportsReviewPage />,
           '/project-manager/documents': <DocumentsPage />,
         })}
       </Route>
