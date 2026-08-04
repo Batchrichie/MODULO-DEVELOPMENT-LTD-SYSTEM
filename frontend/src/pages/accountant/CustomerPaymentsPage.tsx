@@ -1,20 +1,23 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { EmptyState } from '../../components/EmptyState'
+import { FormErrorBanner } from '../../components/FormErrorBanner'
 import { Modal } from '../../components/Modal'
 import { formatMoneyGhs } from '../../lib/formatMoney'
-import { paymentReceivedCreate } from '../../lib/rpc/accountant'
+import { getRecords, paymentReceivedCreate, type CustomerPayment, type Invoice } from '../../lib/rpc/accountant'
 import { supabase } from '../../lib/supabase'
 import { unwrapRpcResponse } from '../../lib/common'
 import '../../styles/executive-dashboard.css'
 
 interface CustomerPaymentFormState {
   customer_id: string
+  invoice_id: string
   amount: string
   settlement_account_id: string
 }
 
 const emptyForm = (): CustomerPaymentFormState => ({
   customer_id: '',
+  invoice_id: '',
   amount: '',
   settlement_account_id: '',
 })
@@ -26,21 +29,131 @@ interface SettlementAccountRecord {
   payment_method_type?: string | null
 }
 
+interface InvoiceRecord extends Invoice {
+  customer_id?: string | null
+  amount?: number | null
+  status?: string | null
+}
+
+interface CustomerPaymentRecord extends CustomerPayment {
+  customer_id?: string | null
+  invoice_id?: string | null
+  payment_date?: string | null
+}
+
+interface OutstandingInvoiceOption {
+  id: string
+  label: string
+  total: number
+  paid: number
+  outstanding: number
+}
+
+function toNumber(value: unknown): number {
+  const numeric = Number(value ?? 0)
+  return Number.isFinite(numeric) ? numeric : 0
+}
+
+function getInvoiceId(record: InvoiceRecord): string {
+  return String(record.invoice_id ?? record.id ?? '')
+}
+
+function getInvoiceSubtotal(record: InvoiceRecord): number {
+  const taxTotal = toNumber(record.vat) + toNumber(record.nhil) + toNumber(record.getfund)
+  if (record.amount !== undefined && record.amount !== null) {
+    return toNumber(record.amount)
+  }
+
+  return Math.max(0, toNumber(record.amount_due) - taxTotal)
+}
+
+function getInvoiceLabel(record: InvoiceRecord): string {
+  const invoiceId = String(record.invoice_number ?? getInvoiceId(record))
+  const createdAt = String(record.created_at ?? 'No date')
+  return `${invoiceId} · ${createdAt}`
+}
+
+function capAmountInput(value: string, maximum?: number): string {
+  if (!value) return ''
+  if (maximum === undefined) return value
+
+  const numeric = Number(value)
+  if (!Number.isFinite(numeric)) return value
+  if (numeric <= maximum) return value
+
+  return maximum.toFixed(2)
+}
+
 export function CustomerPaymentsPage() {
   const [form, setForm] = useState<CustomerPaymentFormState>(emptyForm())
   const [customers, setCustomers] = useState<any[]>([])
   const [settlementAccounts, setSettlementAccounts] = useState<SettlementAccountRecord[]>([])
+  const [customerInvoices, setCustomerInvoices] = useState<InvoiceRecord[]>([])
+  const [customerPayments, setCustomerPayments] = useState<CustomerPaymentRecord[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadingLinkedInvoices, setLoadingLinkedInvoices] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [_error, setError] = useState<string | null>(null)
+  const [linkedInvoiceError, setLinkedInvoiceError] = useState<string | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
   const [showModal, setShowModal] = useState(false)
-  const [_success, setSuccess] = useState<{ payment_id?: string; amount?: number } | null>(null)
 
   useEffect(() => {
     void loadInitialData()
   }, [])
+
+  useEffect(() => {
+    if (!form.customer_id) {
+      setCustomerInvoices([])
+      setCustomerPayments([])
+      setLinkedInvoiceError(null)
+      return
+    }
+
+    void loadCustomerInvoiceData(form.customer_id)
+  }, [form.customer_id])
+
+  const outstandingInvoices = useMemo<OutstandingInvoiceOption[]>(() => {
+    return customerInvoices
+      .map((invoice) => {
+        const invoiceId = getInvoiceId(invoice)
+        const total = getInvoiceSubtotal(invoice) + toNumber(invoice.vat) + toNumber(invoice.nhil) + toNumber(invoice.getfund)
+        const paid = customerPayments
+          .filter((payment) => String(payment.invoice_id ?? '') === invoiceId)
+          .reduce((sum, payment) => sum + toNumber(payment.amount), 0)
+
+        return {
+          id: invoiceId,
+          label: getInvoiceLabel(invoice),
+          total,
+          paid,
+          outstanding: Math.max(0, total - paid),
+        }
+      })
+      .filter((invoice) => invoice.outstanding > 0)
+      .sort((left, right) => right.outstanding - left.outstanding)
+  }, [customerInvoices, customerPayments])
+
+  const selectedInvoice = useMemo(
+    () => outstandingInvoices.find((invoice) => invoice.id === form.invoice_id) ?? null,
+    [form.invoice_id, outstandingInvoices],
+  )
+
+  useEffect(() => {
+    if (!form.invoice_id || selectedInvoice) return
+
+    setForm((current) => ({ ...current, invoice_id: '' }))
+  }, [form.invoice_id, selectedInvoice])
+
+  useEffect(() => {
+    if (!selectedInvoice) return
+
+    const amountValue = Number(form.amount)
+    if (Number.isFinite(amountValue) && amountValue > selectedInvoice.outstanding) {
+      setForm((current) => ({ ...current, amount: selectedInvoice.outstanding.toFixed(2) }))
+    }
+  }, [form.amount, selectedInvoice])
 
   async function loadInitialData() {
     setLoading(true)
@@ -82,13 +195,42 @@ export function CustomerPaymentsPage() {
     // recent payments list removed (not part of this ticket)
   }
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function loadCustomerInvoiceData(customerId: string) {
+    setLoadingLinkedInvoices(true)
+    setLinkedInvoiceError(null)
+
+    const [invoicesResult, paymentsResult] = await Promise.all([
+      getRecords<InvoiceRecord[]>('invoices', 1, 1000),
+      getRecords<CustomerPaymentRecord[]>('customer_payments', 1, 1000),
+    ])
+
+    if (!invoicesResult.ok) {
+      setLinkedInvoiceError(`Failed to load customer invoices: ${invoicesResult.error}`)
+      setCustomerInvoices([])
+    } else {
+      setCustomerInvoices(
+        invoicesResult.data.filter((invoice) => String(invoice.customer_id ?? '') === customerId),
+      )
+    }
+
+    if (!paymentsResult.ok) {
+      setLinkedInvoiceError((current) =>
+        current ? `${current}; Failed to load prior customer payments: ${paymentsResult.error}` : `Failed to load prior customer payments: ${paymentsResult.error}`,
+      )
+      setCustomerPayments([])
+    } else {
+      setCustomerPayments(paymentsResult.data)
+    }
+
+    setLoadingLinkedInvoices(false)
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setSubmitting(true)
     setFormError(null)
-    setSuccess(null)
 
-    if (!form.customer_id) {
+    if (!form.customer_id && !form.invoice_id) {
       setFormError('Customer is required')
       setSubmitting(false)
       return
@@ -106,21 +248,40 @@ export function CustomerPaymentsPage() {
       return
     }
 
+    if (form.invoice_id) {
+      if (!selectedInvoice) {
+        setFormError('Select an outstanding invoice before submitting')
+        setSubmitting(false)
+        return
+      }
+
+      if (Number(form.amount) > selectedInvoice.outstanding) {
+        setFormError(`Amount cannot exceed the selected invoice outstanding balance of ${formatMoneyGhs(selectedInvoice.outstanding)}`)
+        setSubmitting(false)
+        return
+      }
+    }
+
     const payload: Record<string, unknown> = {
-      customer_id: form.customer_id,
       settlement_account_id: form.settlement_account_id,
       amount: Number(form.amount),
     }
 
+    if (form.invoice_id) {
+      payload.invoice_id = form.invoice_id
+    } else {
+      payload.customer_id = form.customer_id
+    }
+
     const result = await paymentReceivedCreate(payload)
     if (result.ok) {
-      setSuccess({
-        payment_id: result.data.payment_id,
-        amount: result.data.amount ?? 0,
-      })
+      const previousCustomerId = form.customer_id
       setForm(emptyForm())
       setShowModal(false)
       setStatusMessage(`Payment ${result.data.payment_id ?? ''} recorded — ${formatMoneyGhs(result.data.amount ?? 0)}`)
+      if (previousCustomerId) {
+        await loadCustomerInvoiceData(previousCustomerId)
+      }
     } else {
       setFormError(result.error)
     }
@@ -159,13 +320,13 @@ export function CustomerPaymentsPage() {
         <div className="users-card__header">
           <div>
             <h2>Payment Details</h2>
-            <p>Payment posts to Client Advances. Link to a specific invoice — coming soon.</p>
+            <p>Payment posts to Client Advances. Link it to a specific invoice when you are settling an outstanding receivable.</p>
           </div>
         </div>
 
         <div className="exec-dash__row">
           <div className="exec-dash__panel">
-            {formError && <div className="exec-dash__state-card exec-dash__state-card--error exec-dash__state-card--inline"><h2 className="exec-dash__state-title">Error</h2><p className="exec-dash__state-message">{formError}</p></div>}
+            <FormErrorBanner message={formError} />
 
             {statusMessage && <div className="exec-dash__state-card exec-dash__state-card--success exec-dash__state-card--inline"><h2 className="exec-dash__state-title">Success</h2><p className="exec-dash__state-message">{statusMessage}</p></div>}
 
@@ -173,7 +334,7 @@ export function CustomerPaymentsPage() {
               <h3 style={{ margin: 0 }}>Customer Payments</h3>
               <div>
                 <button type="button" className="button button--secondary" onClick={() => void loadInitialData()}>Refresh</button>{' '}
-                <button type="button" className="button button--primary" onClick={() => { setForm(emptyForm()); setFormError(null); setShowModal(true) }}>Record Payment</button>
+                <button type="button" className="button button--primary" onClick={() => { setForm(emptyForm()); setFormError(null); setLinkedInvoiceError(null); setShowModal(true) }}>Record Payment</button>
               </div>
             </div>
             <EmptyState
@@ -186,7 +347,7 @@ export function CustomerPaymentsPage() {
               open={showModal}
               onClose={() => setShowModal(false)}
               title="Record Customer Payment"
-              subtitle="Post a customer payment against an invoice or as an advance payment."
+              subtitle="Post a customer advance or settle a specific outstanding invoice."
               maxWidth={760}
               footer={(
                 <>
@@ -198,13 +359,14 @@ export function CustomerPaymentsPage() {
               )}
             >
               <form id="customer-payment-form" onSubmit={(event) => void handleSubmit(event)}>
-                {formError && <div className="exec-dash__state-card exec-dash__state-card--error exec-dash__state-card--inline"><h2 className="exec-dash__state-title">Error</h2><p className="exec-dash__state-message">{formError}</p></div>}
+                <FormErrorBanner message={formError} />
+                <FormErrorBanner message={linkedInvoiceError} label="Load issue" />
                 <div className="form-grid">
                   <label className="form-field">
                     <span className="form-field__label">Customer *</span>
                     <select
                       value={form.customer_id}
-                      onChange={(event) => setForm((current) => ({ ...current, customer_id: event.target.value }))}
+                      onChange={(event) => setForm((current) => ({ ...current, customer_id: event.target.value, invoice_id: '' }))}
                       required
                     >
                       <option value="">Select a customer</option>
@@ -217,16 +379,54 @@ export function CustomerPaymentsPage() {
                   </label>
 
                   <label className="form-field">
+                    <span className="form-field__label">Outstanding invoice (optional)</span>
+                    <select
+                      value={form.invoice_id}
+                      disabled={!form.customer_id || loadingLinkedInvoices || outstandingInvoices.length === 0}
+                      onChange={(event) => {
+                        const nextInvoiceId = event.target.value
+                        const nextInvoice = outstandingInvoices.find((invoice) => invoice.id === nextInvoiceId)
+                        setForm((current) => ({
+                          ...current,
+                          invoice_id: nextInvoiceId,
+                          amount: nextInvoice ? capAmountInput(current.amount, nextInvoice.outstanding) : current.amount,
+                        }))
+                      }}
+                    >
+                      <option value="">
+                        {!form.customer_id
+                          ? 'Select a customer first'
+                          : loadingLinkedInvoices
+                          ? 'Loading outstanding invoices...'
+                          : outstandingInvoices.length === 0
+                          ? 'No outstanding invoices for this customer'
+                          : 'Leave blank to post as a customer advance'}
+                      </option>
+                      {outstandingInvoices.map((invoice) => (
+                        <option key={invoice.id} value={invoice.id}>
+                          {invoice.label} · Outstanding {formatMoneyGhs(invoice.outstanding)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="form-field">
                     <span className="form-field__label">Amount *</span>
                     <input
                       type="number"
                       placeholder="0.00"
                       value={form.amount}
-                      onChange={(event) => setForm((current) => ({ ...current, amount: event.target.value }))}
+                      onChange={(event) => setForm((current) => ({ ...current, amount: capAmountInput(event.target.value, selectedInvoice?.outstanding) }))}
                       step="0.01"
                       min="0"
+                      max={selectedInvoice ? selectedInvoice.outstanding.toFixed(2) : undefined}
                       required
                     />
+                    {selectedInvoice && (
+                      <p className="form-field__hint">
+                        Remaining outstanding balance: {formatMoneyGhs(selectedInvoice.outstanding)}
+                      </p>
+                    )}
                   </label>
 
                   <label className="form-field form-field--full">
@@ -247,11 +447,23 @@ export function CustomerPaymentsPage() {
                 </div>
 
                 <div className="summary-box">
-                  <div className="summary-box__row summary-box__row--total">
+                  <div className="summary-box__row">
                     <strong>Amount to receive:</strong>
                     <span>{formatMoneyGhs(Number(form.amount) || 0)}</span>
                   </div>
-                  <div className="summary-box__note">Posted today.</div>
+                  {selectedInvoice && (
+                    <>
+                      <div className="summary-box__row">
+                        <strong>Invoice outstanding:</strong>
+                        <span>{formatMoneyGhs(selectedInvoice.outstanding)}</span>
+                      </div>
+                      <div className="summary-box__row summary-box__row--total">
+                        <strong>Outstanding after receipt:</strong>
+                        <span>{formatMoneyGhs(Math.max(0, selectedInvoice.outstanding - (Number(form.amount) || 0)))}</span>
+                      </div>
+                    </>
+                  )}
+                  {!selectedInvoice && <div className="summary-box__note">Leave the invoice picker blank to post the payment as a customer advance.</div>}
                 </div>
               </form>
             </Modal>

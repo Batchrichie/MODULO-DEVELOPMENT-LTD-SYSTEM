@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { EmptyState } from '../../components/EmptyState'
 import { Modal } from '../../components/Modal'
 import { formatMoneyGhs } from '../../lib/formatMoney'
-import { invoiceCreate, fetchTaxRates, normalizeTaxRates, type TaxRates } from '../../lib/rpc/accountant'
+import { getRecords, invoiceCreate, fetchTaxRates, normalizeTaxRates, type Invoice, type TaxRates } from '../../lib/rpc/accountant'
 import { supabase } from '../../lib/supabase'
 import { unwrapRpcResponse } from '../../lib/common'
 import '../../styles/executive-dashboard.css'
@@ -30,10 +30,29 @@ const emptyForm = (): InvoiceFormState => ({
   apply_getfund: false,
 })
 
+function toNumber(value: unknown): number {
+  const parsed = Number(value ?? 0)
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
+function formatInvoiceDate(value?: string | null): string {
+  if (!value) return '—'
+
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) return value
+
+  return new Intl.DateTimeFormat('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  }).format(parsed)
+}
+
 export function InvoicingPage() {
   const [form, setForm] = useState<InvoiceFormState>(emptyForm())
   const [customers, setCustomers] = useState<any[]>([])
   const [projects, setProjects] = useState<any[]>([])
+  const [invoices, setInvoices] = useState<Invoice[]>([])
   const [taxRates, setTaxRates] = useState<TaxRates>({})
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
@@ -56,6 +75,40 @@ export function InvoicingPage() {
     void loadInitialData()
   }, [])
 
+  const customerNameById = useMemo(
+    () =>
+      new Map(
+        customers.map((customer) => [
+          String(customer.customer_id ?? customer.id ?? ''),
+          String(customer.name ?? customer.customer_name ?? '—'),
+        ]),
+      ),
+    [customers],
+  )
+
+  const projectNameById = useMemo(
+    () =>
+      new Map(
+        projects.map((project) => [
+          String(project.project_id ?? project.id ?? ''),
+          String(project.name ?? project.project_name ?? '—'),
+        ]),
+      ),
+    [projects],
+  )
+
+  const recentInvoices = useMemo(
+    () =>
+      [...invoices]
+        .sort((left, right) => {
+          const leftTime = new Date(String(left.created_at ?? '')).getTime()
+          const rightTime = new Date(String(right.created_at ?? '')).getTime()
+          return (Number.isFinite(rightTime) ? rightTime : 0) - (Number.isFinite(leftTime) ? leftTime : 0)
+        })
+        .slice(0, 10),
+    [invoices],
+  )
+
   async function loadInitialData() {
     setLoading(true)
     setError(null)
@@ -63,8 +116,14 @@ export function InvoicingPage() {
     const customersPromise = supabase.schema('api').rpc('get_records', { p_resource: 'customers', p_page: 1, p_limit: 100 })
     const projectsPromise = supabase.schema('api').rpc('get_records', { p_resource: 'projects', p_page: 1, p_limit: 100 })
     const taxPromise = fetchTaxRates()
+    const invoicesPromise = getRecords<Invoice[]>('invoices', 1, 100)
 
-    const [customersResult, projectsResult, taxResult] = await Promise.all([customersPromise, projectsPromise, taxPromise])
+    const [customersResult, projectsResult, taxResult, invoicesResult] = await Promise.all([
+      customersPromise,
+      projectsPromise,
+      taxPromise,
+      invoicesPromise,
+    ])
 
     if ('error' in customersResult && customersResult.error) {
       setError(`Failed to load customers: ${customersResult.error.message}`)
@@ -96,7 +155,12 @@ export function InvoicingPage() {
       setTaxRates(normalizeTaxRates(taxResult.data))
     }
 
-    // recent invoices list removed (not part of this ticket)
+    if (!invoicesResult.ok) {
+      setError((current) => current ? `${current}; Failed to load invoices: ${invoicesResult.error}` : `Failed to load invoices: ${invoicesResult.error}`)
+      setInvoices([])
+    } else {
+      setInvoices(Array.isArray(invoicesResult.data) ? invoicesResult.data : [])
+    }
 
     setLoading(false)
   }
@@ -141,18 +205,20 @@ export function InvoicingPage() {
 
     const result = await invoiceCreate(payload)
     if (result.ok) {
+      const createdInvoice = result.data
       setSuccess({
-        invoice_id: result.data.invoice_id ?? undefined,
-        journal_id: result.data.journal_id ?? undefined,
-        amount_due: result.data.amount_due ?? undefined,
-        vat: result.data.vat ?? undefined,
-        nhil: result.data.nhil ?? undefined,
-        getfund: result.data.getfund ?? undefined,
-        functional_amount: result.data.functional_amount ?? undefined,
+        invoice_id: createdInvoice.invoice_id ?? undefined,
+        journal_id: createdInvoice.journal_id ?? undefined,
+        amount_due: createdInvoice.amount_due ?? undefined,
+        vat: createdInvoice.vat ?? undefined,
+        nhil: createdInvoice.nhil ?? undefined,
+        getfund: createdInvoice.getfund ?? undefined,
+        functional_amount: createdInvoice.functional_amount ?? undefined,
       })
       setForm(emptyForm())
       setShowModal(false)
-      setStatusMessage(`Invoice ${result.data.invoice_id ?? ''} created — ${formatMoneyGhs(result.data.amount_due ?? 0)}`)
+      setStatusMessage(`Invoice ${createdInvoice.invoice_id ?? ''} created — ${formatMoneyGhs(createdInvoice.amount_due ?? 0)}`)
+      setInvoices((current) => [createdInvoice, ...current])
     } else {
       setFormError(result.error)
     }
@@ -239,11 +305,48 @@ export function InvoicingPage() {
                 <button type="button" className="button button--primary" onClick={() => { setForm(emptyForm()); setFormError(null); setShowModal(true) }}>New Invoice</button>
               </div>
             </div>
-            <EmptyState
-              icon="📄"
-              title="Recent invoices hidden"
-              description="Recent invoices list is not shown in this view."
-            />
+            {!recentInvoices.length ? (
+              <EmptyState
+                icon="📄"
+                title="No recent invoices"
+                description="Invoices you create here will appear in this list."
+              />
+            ) : (
+              <div className="table-wrapper">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Invoice</th>
+                      <th>Customer</th>
+                      <th>Project</th>
+                      <th>Created</th>
+                      <th className="data-table__num">Taxes</th>
+                      <th className="data-table__num">Amount Due</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {recentInvoices.map((invoice) => {
+                      const invoiceId = String(invoice.invoice_id ?? invoice.id ?? invoice.invoice_number ?? '')
+                      const customerId = String(invoice.customer_id ?? '')
+                      const projectId = String(invoice.project_id ?? '')
+                      const taxTotal = toNumber(invoice.vat) + toNumber(invoice.nhil) + toNumber(invoice.getfund)
+                      const customerName = customerNameById.get(customerId) ?? (customerId || '—')
+                      const projectName = projectNameById.get(projectId) ?? (projectId || '—')
+                      return (
+                        <tr key={invoiceId}>
+                          <td>{invoice.invoice_number ?? invoice.invoice_id ?? '—'}</td>
+                          <td>{customerName}</td>
+                          <td>{projectName}</td>
+                          <td>{formatInvoiceDate(invoice.created_at)}</td>
+                          <td className="data-table__num">{formatMoneyGhs(taxTotal)}</td>
+                          <td className="data-table__num">{formatMoneyGhs(toNumber(invoice.amount_due))}</td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
 
             <Modal
               open={showModal}
