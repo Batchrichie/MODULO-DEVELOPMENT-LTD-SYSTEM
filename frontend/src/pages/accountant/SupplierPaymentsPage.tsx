@@ -31,6 +31,7 @@ interface SettlementAccountRecord {
 
 interface ExpenseRecord extends Expense {
   supplier_id?: string | null
+  vendor_name?: string | null
   vat_input?: number | null
   status?: string | null
 }
@@ -61,8 +62,11 @@ function getExpenseId(record: ExpenseRecord): string {
 function getExpenseLabel(record: ExpenseRecord): string {
   const expenseId = getExpenseId(record)
   const description = String(record.description ?? 'No description')
+  const vendorName = String(record.vendor_name ?? '').trim()
   const createdAt = String(record.created_at ?? 'No date')
-  return `${expenseId} · ${description} · ${createdAt}`
+  return vendorName
+    ? `${expenseId} · ${description} · ${vendorName} · ${createdAt}`
+    : `${expenseId} · ${description} · ${createdAt}`
 }
 
 function capAmountInput(value: string, maximum?: number): string {
@@ -82,6 +86,7 @@ export function SupplierPaymentsPage() {
   const [settlementAccounts, setSettlementAccounts] = useState<SettlementAccountRecord[]>([])
   const [supplierExpenses, setSupplierExpenses] = useState<ExpenseRecord[]>([])
   const [supplierPayments, setSupplierPayments] = useState<SupplierPaymentRecord[]>([])
+  const [recentPayments, setRecentPayments] = useState<SupplierPaymentRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [loadingLinkedExpenses, setLoadingLinkedExpenses] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -126,6 +131,11 @@ export function SupplierPaymentsPage() {
       .filter((expense) => expense.outstanding > 0)
       .sort((left, right) => right.outstanding - left.outstanding)
   }, [supplierExpenses, supplierPayments])
+
+  const supplierNameById = useMemo(
+    () => new Map(suppliers.map((supplier) => [String(supplier.supplier_id ?? supplier.id ?? ''), String(supplier.name ?? supplier.supplier_name ?? '—')])),
+    [suppliers],
+  )
 
   const selectedExpense = useMemo(
     () => outstandingExpenses.find((expense) => expense.id === form.expense_id) ?? null,
@@ -183,8 +193,15 @@ export function SupplierPaymentsPage() {
       }
     }
 
+    const paymentsResult = await getRecords<SupplierPaymentRecord[]>('supplier_payments', 1, 50)
+    if (!paymentsResult.ok) {
+      console.warn(`Failed to load recent supplier payments: ${paymentsResult.error}`)
+      setRecentPayments([])
+    } else {
+      setRecentPayments(Array.isArray(paymentsResult.data) ? paymentsResult.data : [])
+    }
+
     setLoading(false)
-    // recent payments list removed (not part of this ticket)
   }
 
   async function loadSupplierExpenseData(supplierId: string) {
@@ -329,11 +346,38 @@ export function SupplierPaymentsPage() {
                 <button type="button" className="button button--primary" onClick={() => { setForm(emptyForm()); setFormError(null); setLinkedExpenseError(null); setShowModal(true) }}>Record Payment</button>
               </div>
             </div>
-            <EmptyState
-              icon="💰"
-              title="Recent payments hidden"
-              description="Recent payments list is not shown in this view."
-            />
+            {recentPayments.length === 0 ? (
+              <EmptyState
+                icon="💰"
+                title="Recent payments hidden"
+                description="Recent payments list is not shown in this view."
+              />
+            ) : (
+              <div style={{ overflowX: 'auto', marginBottom: '1rem' }}>
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Payment</th>
+                      <th>Supplier</th>
+                      <th>Expense</th>
+                      <th>Amount</th>
+                      <th>Date</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {recentPayments.slice(0, 10).map((payment) => (
+                      <tr key={payment.payment_id ?? payment.id ?? Math.random()}>
+                        <td>{payment.payment_id ?? payment.id ?? '—'}</td>
+                        <td>{supplierNameById.get(String(payment.supplier_id ?? '')) ?? String(payment.supplier_id ?? '—')}</td>
+                        <td>{String(payment.expense_id ?? '—')}</td>
+                        <td>{formatMoneyGhs(Number(payment.amount ?? 0))}</td>
+                        <td>{String(payment.payment_date ?? payment.created_at ?? '—')}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
 
             <Modal
               open={showModal}

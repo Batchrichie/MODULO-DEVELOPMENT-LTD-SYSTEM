@@ -2,13 +2,14 @@ import { useEffect, useState } from 'react'
 import { EmptyState } from '../../components/EmptyState'
 import { Modal } from '../../components/Modal'
 import { formatMoneyGhs } from '../../lib/formatMoney'
-import { expenseCreate, fetchAccounts } from '../../lib/rpc/accountant'
+import { expenseCreate, fetchAccounts, getRecords, type Expense } from '../../lib/rpc/accountant'
 import { supabase } from '../../lib/supabase'
 import { unwrapRpcResponse } from '../../lib/common'
 import '../../styles/executive-dashboard.css'
 
 interface ExpenseFormState {
   supplier_id: string
+  vendor_name: string
   amount: string
   project_id: string
   coa_account: string
@@ -19,6 +20,7 @@ const emptyForm = (): ExpenseFormState => {
   const today = new Date().toISOString().split('T')[0]
   return {
     supplier_id: '',
+    vendor_name: '',
     amount: '',
     project_id: '',
     coa_account: '',
@@ -28,9 +30,11 @@ const emptyForm = (): ExpenseFormState => {
 
 export function ExpensesPage() {
   const [form, setForm] = useState<ExpenseFormState>(emptyForm())
+  const [useVendorName, setUseVendorName] = useState(false)
   const [suppliers, setSuppliers] = useState<any[]>([])
   const [projects, setProjects] = useState<any[]>([])
   const [accounts, setAccounts] = useState<any[]>([])
+  const [expenses, setExpenses] = useState<Expense[]>([])
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [_error, setError] = useState<string | null>(null)
@@ -95,8 +99,15 @@ export function ExpensesPage() {
       console.warn(`Failed to load accounts: ${accountsResult.error}`)
     }
 
+    const expensesResult = await getRecords<Expense[]>('expenses', 1, 50)
+    if (!expensesResult.ok) {
+      console.warn(`Failed to load expenses: ${expensesResult.error}`)
+      setExpenses([])
+    } else {
+      setExpenses(Array.isArray(expensesResult.data) ? expensesResult.data : [])
+    }
+
     setLoading(false)
-    // recent expenses list removed (not part of this ticket)
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -105,9 +116,9 @@ export function ExpensesPage() {
     setFormError(null)
     setSuccess(null)
 
-    // Validate required fields
-    if (!form.supplier_id) {
-      setFormError('Supplier is required')
+    const vendorName = form.vendor_name.trim()
+    if (!form.supplier_id && !vendorName) {
+      setFormError('Either supplier_id or vendor_name is required')
       setSubmitting(false)
       return
     }
@@ -125,10 +136,15 @@ export function ExpensesPage() {
     }
 
     const payload: Record<string, unknown> = {
-      supplier_id: form.supplier_id,
       amount: Number(form.amount),
       coa_account: form.coa_account,
       expense_date: form.expense_date,
+    }
+
+    if (form.supplier_id) {
+      payload.supplier_id = form.supplier_id
+    } else {
+      payload.vendor_name = vendorName
     }
 
     // project_id is optional - overhead expenses are valid (don't force project selection)
@@ -201,11 +217,45 @@ export function ExpensesPage() {
                 <button type="button" className="button button--primary" onClick={() => { setForm(emptyForm()); setFormError(null); setShowModal(true) }}>New Expense</button>
               </div>
             </div>
-            <EmptyState
-              icon="🧾"
-              title="Recent expenses hidden"
-              description="Recent expenses list is not shown in this view."
-            />
+            {expenses.length === 0 ? (
+              <EmptyState
+                icon="🧾"
+                title="Recent expenses hidden"
+                description="Recent expenses list is not shown in this view."
+              />
+            ) : (
+              <div style={{ overflowX: 'auto' }}>
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Expense</th>
+                      <th>Supplier / vendor</th>
+                      <th>Amount</th>
+                      <th>Date</th>
+                      <th>Description</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[...expenses]
+                      .sort((left, right) => {
+                        const leftDate = new Date(String(left.created_at ?? '')).getTime()
+                        const rightDate = new Date(String(right.created_at ?? '')).getTime()
+                        return rightDate - leftDate
+                      })
+                      .slice(0, 10)
+                      .map((expense) => (
+                        <tr key={expense.expense_id ?? expense.id ?? Math.random()}>
+                          <td>{expense.expense_id ?? expense.id ?? '—'}</td>
+                          <td>{String(expense.vendor_name ?? expense.supplier_id ?? '—')}</td>
+                          <td>{formatMoneyGhs(Number(expense.amount ?? 0))}</td>
+                          <td>{String(expense.expense_date ?? expense.created_at ?? '—')}</td>
+                          <td>{String(expense.description ?? '—')}</td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
 
             <Modal
               open={showModal}
@@ -233,20 +283,49 @@ export function ExpensesPage() {
               <form id="expense-form" onSubmit={(event) => void handleSubmit(event)}>
                 {formError && <div className="exec-dash__state-card exec-dash__state-card--error exec-dash__state-card--inline"><h2 className="exec-dash__state-title">Error</h2><p className="exec-dash__state-message">{formError}</p></div>}
                 <div className="form-grid">
+                  <div className="form-field form-field--full" style={{ marginBottom: '1rem' }}>
+                    <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <input
+                        type="checkbox"
+                        checked={useVendorName}
+                        onChange={(event) => {
+                          const next = event.target.checked
+                          setUseVendorName(next)
+                          setForm((current) => ({
+                            ...current,
+                            supplier_id: next ? '' : current.supplier_id,
+                            vendor_name: next ? '' : current.vendor_name,
+                          }))
+                        }}
+                      />
+                      <span style={{ margin: 0 }}>One-time vendor (no supplier record)</span>
+                    </label>
+                  </div>
+
                   <label className="form-field">
-                    <span className="form-field__label">Supplier *</span>
-                    <select
-                      value={form.supplier_id}
-                      onChange={(event) => setForm((current) => ({ ...current, supplier_id: event.target.value }))}
-                      required
-                    >
-                      <option value="">Select a supplier</option>
-                      {suppliers.map((supplier) => (
-                        <option key={supplier.supplier_id || supplier.id} value={supplier.supplier_id || supplier.id}>
-                          {supplier.name || supplier.supplier_name || '—'}
-                        </option>
-                      ))}
-                    </select>
+                    <span className="form-field__label">{useVendorName ? 'Vendor name *' : 'Supplier *'}</span>
+                    {useVendorName ? (
+                      <input
+                        type="text"
+                        placeholder="Vendor name"
+                        value={form.vendor_name}
+                        onChange={(event) => setForm((current) => ({ ...current, vendor_name: event.target.value }))}
+                        required
+                      />
+                    ) : (
+                      <select
+                        value={form.supplier_id}
+                        onChange={(event) => setForm((current) => ({ ...current, supplier_id: event.target.value }))}
+                        required
+                      >
+                        <option value="">Select a supplier</option>
+                        {suppliers.map((supplier) => (
+                          <option key={supplier.supplier_id || supplier.id} value={supplier.supplier_id || supplier.id}>
+                            {supplier.name || supplier.supplier_name || '—'}
+                          </option>
+                        ))}
+                      </select>
+                    )}
                   </label>
 
                   <label className="form-field">
